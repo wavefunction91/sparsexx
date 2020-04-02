@@ -45,6 +45,27 @@ namespace detail {
     spmbv_uses_generic_csr<SpMatType, ALPHAT, BETAT>::value;
 }
 
+
+/**
+ *  @brief Generic CSR sparse matrix - dense block vector product.
+ *
+ *  AV = ALPHA * A * V + BETA * AV
+ *
+ *  Generic implementation over any semiring.
+ *
+ *  @tparam SpMatType Sparse matrix type s.t. is_csr_matrix_v is true
+ *  @tparam ALPHAT    Type of ALPHA, must be convertible to SpMatType::value_type
+ *  @tparam BETAT     Type of BETA, must be convertible to SpMatType::value_type
+ *
+ *  @param[in]     K      Number of columns in V/AV
+ *  @param[in]     ALPHA  First scaling factor
+ *  @param[in]     A      Sparse matrix in CSR format
+ *  @param[in]     V      Input block vector stored in column major format
+ *  @param[in]     LDV    Leading dimension of V
+ *  @param[in]     BETA   Second scaling factor
+ *  @param[in/out] AV     Output block vector stored in column major format
+ *  @param[in]     LDAV   Leading dimension of AV
+ */
 template <typename SpMatType, typename ALPHAT, typename BETAT>
 std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
   gespmbv( int64_t K, ALPHAT ALPHA, const SpMatType& A,
@@ -64,8 +85,9 @@ std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
   const auto* Aci = A.colind().data();
   const auto  indexing = A.indexing();
 
-  //std::cout << "IN GENERIC" << std::endl;
+  #ifdef _OPENMP
   #pragma omp parallel for collapse(2)
+  #endif
   for( int64_t k = 0; k < K; ++k )
   for( int64_t i = 0; i < N; ++i ) {
     const auto j_st  = Arp[i]   - indexing;
@@ -87,6 +109,27 @@ std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
 
 }
 
+/**
+ *  @brief Optimized sparse matrix - dense block vector product.
+ *
+ *  AV = ALPHA * A * V + BETA * AV
+ *
+ *  Optimized MKL implementation over any semiring and any MKL supported
+ *  sparse matrix format.
+ *
+ *  @tparam SpMatType Sparse matrix type s.t. is_mkl_matrix_v is true
+ *  @tparam ALPHAT    Type of ALPHA, must be convertible to SpMatType::value_type
+ *  @tparam BETAT     Type of BETA, must be convertible to SpMatType::value_type
+ *
+ *  @param[in]     K      Number of columns in V/AV
+ *  @param[in]     ALPHA  First scaling factor
+ *  @param[in]     A      Sparse matrix stored in any MKL compatible format
+ *  @param[in]     V      Input block vector stored in column major format
+ *  @param[in]     LDV    Leading dimension of V
+ *  @param[in]     BETA   Second scaling factor
+ *  @param[in/out] AV     Output block vector stored in column major format
+ *  @param[in]     LDAV   Leading dimension of AV
+ */
 template <typename SpMatType, typename ALPHAT, typename BETAT>
 std::enable_if_t< detail::spmbv_uses_mkl_v<SpMatType, ALPHAT, BETAT> >
   gespmbv( int64_t K, ALPHAT ALPHA, const SpMatType& A,
@@ -94,7 +137,6 @@ std::enable_if_t< detail::spmbv_uses_mkl_v<SpMatType, ALPHAT, BETAT> >
           typename SpMatType::value_type* AV, int64_t LDAV ) {
 
 
-  //std::cout << "IN MKL" << std::endl;
   sparse_status_t stat;
 
   using value_type = typename SpMatType::value_type;

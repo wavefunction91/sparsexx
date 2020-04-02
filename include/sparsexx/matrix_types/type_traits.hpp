@@ -22,4 +22,13 @@ struct is_csr_matrix< SpMatType,
 template <typename SpMatType>
 inline constexpr bool is_csr_matrix_v = is_csr_matrix<SpMatType>::value;
 
+template <typename SpMatType, typename U = void>
+struct enable_if_csr_matrix {
+  using type = std::enable_if_t< is_csr_matrix_v<SpMatType>, U>;
+};
+
+template <typename SpMatType, typename U = void>
+using enable_if_csr_matrix_t = typename enable_if_csr_matrix<SpMatType,U>::type;
+
+
 }
