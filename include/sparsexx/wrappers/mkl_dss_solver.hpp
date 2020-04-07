@@ -81,6 +81,20 @@ namespace detail::mkl {
       auto err = dss_solve_real( h, opts, B, NRHS, X );
       if( err != MKL_DSS_SUCCESS ) throw mkl_dss_exception( err );
     }
+
+    std::tuple< int64_t, int64_t, int64_t > get_inertia() {
+      std::vector<double> inertia(3);
+      auto opts = MKL_DSS_DEFAULTS;
+      auto err = dss_statistics( handle(), opts, "Inertia",
+        inertia.data() );
+      if( err != MKL_DSS_SUCCESS ) throw mkl_dss_exception( err );
+
+      int64_t p = inertia[0];
+      int64_t n = inertia[1];
+      int64_t z = inertia[2];
+
+      return { p, n, z };
+    }
   };
 
 
@@ -121,12 +135,17 @@ namespace detail::mkl {
 
       std::allocator<value_type> alloc;
       auto* X = alloc.allocate( NRHS * LDB );
-
       solve( NRHS, B, LDB, X, LDB );
-
       alloc.deallocate( X, NRHS*LDB );
 
     };
+
+
+    std::tuple< int64_t, int64_t, int64_t > get_inertia() override {
+      return mkl_dss_solver_base::get_inertia();
+    }
+
+
   };
 
 }

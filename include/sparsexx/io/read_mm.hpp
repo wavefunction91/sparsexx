@@ -56,7 +56,7 @@ csr_matrix<T,index_t,Alloc> read_mm( std::string fname ) {
     if( is_sym ) nnz = 2*nnz - n;
   }
 
-  std::cout << m << ", " << n << ", " << nnz << ", " << std::boolalpha << is_sym << std::endl;
+  //std::cout << m << ", " << n << ", " << nnz << ", " << std::boolalpha << is_sym << std::endl;
 
   std::vector< std::tuple< int64_t, int64_t, T > > coo;
   coo.reserve( nnz );

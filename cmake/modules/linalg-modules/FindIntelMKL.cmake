@@ -82,7 +82,11 @@ if( NOT intelmkl_PREFERED_MPI_LIBRARY )
 endif()
 
 if( NOT intelmkl_PREFIX )
-  set( intelmkl_PREFIX $ENV{MKLROOT} )
+  if( $ENV{MKLROOT} )
+    set( intelmkl_PREFIX $ENV{MKLROOT} )
+  elseif( MKLROOT )
+    set( intelmkl_PREFIX "${MKLROOT}" )
+  endif()
 endif()
 
 
