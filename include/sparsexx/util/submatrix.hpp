@@ -24,9 +24,6 @@ template <typename SpMatType,
   const auto M_sub = row_up - row_lo;
   const auto N_sub = col_up - col_lo;
 
-  std::cout << "Row bounds: [" << row_lo << ", " << row_up << ")" << std::endl;
-  std::cout << "Col bounds: [" << col_lo << ", " << col_up << ")" << std::endl;
-
   // Determine NNZ in submatrix
   size_t nnz_sub = 0;
   std::vector<typename SpMatType::index_type> rowptr_sub( M_sub + 1 );
@@ -186,13 +183,52 @@ template <typename SpMatType,
     const auto* Aci_en = Aci + j_en;
     const auto* Anz_st = Anz + j_st;
 
-    const auto diag_it = std::find( Aci_st, Aci_en, i );
+    const auto diag_it = std::find( Aci_st, Aci_en, i+indexing );
     const auto diag_off = std::distance( Aci_st, diag_it );
     D[i] = Anz_st[diag_off];
 
   }
 
   return D;
+}
+
+
+
+
+
+template <typename SpMatType, 
+  typename = detail::enable_if_csr_matrix_t<SpMatType>
+> typename SpMatType::value_type trace( const SpMatType& A ) {
+
+  const auto M = A.m();
+  const auto N = A.n();
+
+  const auto* Anz = A.nzval().data();
+  const auto* Arp = A.rowptr().data();
+  const auto* Aci = A.colind().data();
+  const auto  indexing = A.indexing();
+
+  typename SpMatType::value_type tr = 0.;
+
+  using index_t = typename SpMatType::index_type;
+  for( index_t i = 0; i < M; ++i ) {
+
+    const auto j_st  = Arp[i]   - indexing;
+    const auto j_en  = Arp[i+1] - indexing;
+  
+    const auto* Aci_st = Aci + j_st;
+    const auto* Aci_en = Aci + j_en;
+    const auto* Anz_st = Anz + j_st;
+
+    const auto diag_it = std::find( Aci_st, Aci_en, i+indexing );
+    if( diag_it != Aci_en ) {
+      const auto diag_off = std::distance( Aci_st, diag_it );
+      tr += Anz_st[ diag_off ];
+    }
+
+  }
+
+  return tr;
 }
 
 }

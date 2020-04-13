@@ -17,7 +17,6 @@ struct sparse_wrapper_pimpl {
   }
 
   void optimize() { 
-    std::cout << "Optimizing..." << std::endl;
     mkl_sparse_optimize( mat );
   }
 };

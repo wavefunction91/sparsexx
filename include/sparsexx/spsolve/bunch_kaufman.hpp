@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <iostream>
 
 namespace sparsexx::spsolve {
 
@@ -17,6 +18,9 @@ namespace detail {
     virtual void solve( int64_t NRHS, value_type* B, int64_t LDB ) = 0;
 
     virtual std::tuple<int64_t, int64_t, int64_t> get_inertia() = 0;
+
+    virtual ~bunch_kaufman_pimpl() noexcept = default;
+
   };
 
   struct bunch_kaufman_init_exception : public std::exception {
@@ -40,9 +44,18 @@ protected:
 
 public:
 
+  virtual ~bunch_kaufman() noexcept = default;
+
   bunch_kaufman( pimpl_type&& pimpl ) :
     pimpl_( std::move( pimpl ) ) { }
   
+  bunch_kaufman( ) : bunch_kaufman(nullptr){ }
+
+  bunch_kaufman( const bunch_kaufman& ) = delete;
+  bunch_kaufman( bunch_kaufman&&      ) noexcept = default;
+
+  bunch_kaufman& operator=( const bunch_kaufman& ) = delete;
+  bunch_kaufman& operator=( bunch_kaufman&&      ) noexcept = default;
 
   void factorize(const SpMatType& A) {
     if( pimpl_ ) pimpl_->factorize(A);

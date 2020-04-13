@@ -6,7 +6,7 @@
 
 namespace sparsexx::detail::mkl {
 
-const char*  get_mkl_sparse_error_string( sparse_status_t s ) {
+static inline const char*  get_mkl_sparse_error_string( sparse_status_t s ) {
 
   switch( s ) {
     case SPARSE_STATUS_SUCCESS:
@@ -35,7 +35,7 @@ const char*  get_mkl_sparse_error_string( sparse_status_t s ) {
   }
 }
 
-const char*  get_mkl_dss_error_string( int s ) {
+static inline const char*  get_mkl_dss_error_string( int s ) {
 
   switch(s) {
 

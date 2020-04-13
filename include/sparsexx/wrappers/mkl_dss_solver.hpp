@@ -6,6 +6,9 @@
 #include "mkl_exceptions.hpp"
 #include <mkl_dss.h>
 
+#include <iostream>
+#include <chrono>
+
 namespace sparsexx::spsolve {
 
 namespace detail::mkl {
@@ -25,7 +28,7 @@ namespace detail::mkl {
         throw mkl_dss_exception( err );
     }
 
-    ~mkl_dss_handle() noexcept {
+    virtual ~mkl_dss_handle() noexcept {
       auto opts = MKL_DSS_DEFAULTS;
       dss_delete( handle_, opts );
     }
@@ -46,6 +49,7 @@ namespace detail::mkl {
   public:
 
     mkl_dss_solver_base() = delete;
+    virtual ~mkl_dss_solver_base() noexcept = default;
 
     mkl_dss_solver_base( int_type symmetry, int_type type, int_type m, int_type n, 
       int_type nnz, const int_type* rowptr, const int_type* colind, 
@@ -61,6 +65,12 @@ namespace detail::mkl {
     void reorder(int_type opts = MKL_DSS_DEFAULTS) {
       auto err = dss_reorder( handle_.handle(), opts, 0 );
       if( err != MKL_DSS_SUCCESS ) throw mkl_dss_exception( err );
+
+      double reorder_dur;
+      err = dss_statistics( handle_.handle(), opts, "ReorderTime",
+        &reorder_dur );
+      if( err != MKL_DSS_SUCCESS ) throw mkl_dss_exception( err );
+      std::cout << "REORDER TIME = " << reorder_dur << std::endl;
     }
 
     auto&       handle()       { return handle_.handle(); }
@@ -105,6 +115,8 @@ namespace detail::mkl {
 
     using value_type = typename SpMatType::value_type;
 
+    virtual ~mkl_dss_bunch_kaufman_solver() noexcept = default;
+
     mkl_dss_bunch_kaufman_solver( int_type m, int_type n, int_type nnz, 
       const int_type* rowptr, const int_type* colind, 
       int_type handle_opts = MKL_DSS_DEFAULTS) : 
@@ -118,7 +130,10 @@ namespace detail::mkl {
     mkl_dss_bunch_kaufman_solver( const SpMatType& A, 
       int_type handle_opts = MKL_DSS_DEFAULTS ):
       mkl_dss_bunch_kaufman_solver( A.m(), A.n(), A.nnz(),
-        A.rowptr().data(), A.colind().data(), handle_opts ) { }
+        A.rowptr().data(), A.colind().data(), handle_opts ) { 
+
+
+      }
 
     void factorize( const SpMatType& A ) override {
       factorize( A.nzval().data() );
@@ -134,9 +149,10 @@ namespace detail::mkl {
     void solve( int64_t NRHS, value_type* B, int64_t LDB ) override {
 
       std::allocator<value_type> alloc;
-      auto* X = alloc.allocate( NRHS * LDB );
+      auto *X = alloc.allocate( LDB * NRHS );
       solve( NRHS, B, LDB, X, LDB );
-      alloc.deallocate( X, NRHS*LDB );
+      std::copy_n( X, LDB*NRHS, B );
+      alloc.deallocate( X, LDB * NRHS );
 
     };
 

@@ -25,7 +25,7 @@ static inline std::string& trim(std::string &s) {
   return ltrim(rtrim(s));
 }
 
-std::vector<std::string> tokenize( const std::string& str,
+static inline std::vector<std::string> tokenize( const std::string& str,
                                    const std::string& delimiters = " ") {
 
   std::vector<std::string> tokens;

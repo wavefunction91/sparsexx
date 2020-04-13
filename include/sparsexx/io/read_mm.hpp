@@ -30,7 +30,6 @@ csr_matrix<T,index_t,Alloc> read_mm( std::string fname ) {
     auto tokens = tokenize( line );
 
     // Check if this is actually a MM file...
-    for( auto& t : tokens ) std::cout << t << std::endl;
 
     if( tokens[0].compare("%%MatrixMarket") or tokens.size() != 5)
       throw std::runtime_error(fname + " is not a MM file");
@@ -56,7 +55,6 @@ csr_matrix<T,index_t,Alloc> read_mm( std::string fname ) {
     if( is_sym ) nnz = 2*nnz - n;
   }
 
-  //std::cout << m << ", " << n << ", " << nnz << ", " << std::boolalpha << is_sym << std::endl;
 
   std::vector< std::tuple< int64_t, int64_t, T > > coo;
   coo.reserve( nnz );
