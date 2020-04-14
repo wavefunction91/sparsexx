@@ -72,7 +72,7 @@ csr_matrix<T,index_t,Alloc> read_mm( std::string fname ) {
 
   }
 
-  assert( coo.size() == nnz );
+  assert( coo.size() == (size_t)nnz );
 
 
 

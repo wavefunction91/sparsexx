@@ -9,7 +9,7 @@ void convert_to_dense( const csr_matrix<Args...>& A,
   typename csr_matrix<Args...>::value_type* A_dense, int64_t LDAD ) {
 
   const int64_t M = A.m();
-  const int64_t N = A.n();
+  //const int64_t N = A.n();
 
   if( M > LDAD ) throw std::runtime_error("M > LDAD");
 

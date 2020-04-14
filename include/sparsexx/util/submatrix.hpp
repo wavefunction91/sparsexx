@@ -164,7 +164,7 @@ template <typename SpMatType,
   extract_diagonal_elements( const SpMatType& A ) {
 
   const auto M = A.m();
-  const auto N = A.n();
+  //const auto N = A.n();
 
   const auto* Anz = A.nzval().data();
   const auto* Arp = A.rowptr().data();
@@ -201,7 +201,7 @@ template <typename SpMatType,
 > typename SpMatType::value_type trace( const SpMatType& A ) {
 
   const auto M = A.m();
-  const auto N = A.n();
+  //const auto N = A.n();
 
   const auto* Anz = A.nzval().data();
   const auto* Arp = A.rowptr().data();

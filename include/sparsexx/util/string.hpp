@@ -46,6 +46,6 @@ static inline std::vector<std::string> tokenize( const std::string& str,
   for( auto& t : tokens ) trim(t);
   return tokens;
 
-}; // tokenize
+} // tokenize
 
 }

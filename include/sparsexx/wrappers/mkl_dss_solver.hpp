@@ -86,6 +86,7 @@ namespace detail::mkl {
 
     void solve_real( int_type NRHS, const void* B, int_type LDB, void* X, 
       int_type LDX ) {
+      assert( LDB == LDX );
       auto& h = handle();
       auto opts = MKL_DSS_DEFAULTS;
       auto err = dss_solve_real( h, opts, B, NRHS, X );

@@ -16,6 +16,8 @@ target_compile_features   ( sparsexx INTERFACE cxx_std_17                    )
 target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl                 )
 target_include_directories( sparsexx INTERFACE ${PROJECT_SOURCE_DIR}/include )
 
+target_compile_options( sparsexx INTERFACE "-Wall" "-Wextra" "-Wpedantic" "-Wnon-virtual-dtor")
+
 
 
 add_executable       ( sparsexx_ls_test test_ls.cxx     )
@@ -46,28 +48,28 @@ target_link_libraries( sparsexx_submat_test PUBLIC sparsexx )
 #
 #
 #
-find_package( BLACS REQUIRED )
-set( FEAST_DIR ${PROJECT_SOURCE_DIR}/FEAST/4.0                           )
-set( FEAST_LIBRARIES "${FEAST_DIR}/lib/mic-knl/libpfeast.a;BLACS::BLACS" )
-set( FEAST_INCLUDE_DIRECTORIES ${FEAST_DIR}/include                      )
-add_library( feast INTERFACE IMPORTED )
-set_target_properties( feast 
-  PROPERTIES 
-  INTERFACE_LINK_LIBRARIES      "${FEAST_LIBRARIES}"
-  INTERFACE_INCLUDE_DIRECTORIES "${FEAST_INCLUDE_DIRECTORIES}"
-)
-
-add_executable       ( sparsexx_pfeast_test test_pfeast.cxx       )
-target_link_libraries( sparsexx_pfeast_test PUBLIC feast sparsexx )
-add_executable       ( sparsexx_pfeast_3p_test test_pfeast_3p.cxx       )
-target_link_libraries( sparsexx_pfeast_3p_test PUBLIC feast sparsexx )
-
-
-
-#set( lobpcgxx_DIR   "$ENV{HOME}/devel/lobpcgxx/install_lobpcgxx_xg/lib64/cmake/lobpcgxx"     )
-#set( blaspp_DIR     "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/blaspp" )
-#set( lapackpp_DIR   "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/lapackpp" )
-#find_package( lobpcgxx REQUIRED )
+#find_package( BLACS REQUIRED )
+#set( FEAST_DIR ${PROJECT_SOURCE_DIR}/FEAST/4.0                           )
+#set( FEAST_LIBRARIES "${FEAST_DIR}/lib/mic-knl/libpfeast.a;BLACS::BLACS" )
+#set( FEAST_INCLUDE_DIRECTORIES ${FEAST_DIR}/include                      )
+#add_library( feast INTERFACE IMPORTED )
+#set_target_properties( feast 
+#  PROPERTIES 
+#  INTERFACE_LINK_LIBRARIES      "${FEAST_LIBRARIES}"
+#  INTERFACE_INCLUDE_DIRECTORIES "${FEAST_INCLUDE_DIRECTORIES}"
+#)
 #
-#add_executable       ( sparsexx_lpcg_test test_lpcg.cxx                      )
-#target_link_libraries( sparsexx_lpcg_test PUBLIC lobpcgxx::lobpcgxx sparsexx ) 
+#add_executable       ( sparsexx_pfeast_test test_pfeast.cxx       )
+#target_link_libraries( sparsexx_pfeast_test PUBLIC feast sparsexx )
+#add_executable       ( sparsexx_pfeast_3p_test test_pfeast_3p.cxx       )
+#target_link_libraries( sparsexx_pfeast_3p_test PUBLIC feast sparsexx )
+
+
+
+set( lobpcgxx_DIR   "$ENV{HOME}/devel/lobpcgxx/install_lobpcgxx_xg/lib64/cmake/lobpcgxx"     )
+set( blaspp_DIR     "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/blaspp" )
+set( lapackpp_DIR   "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/lapackpp" )
+find_package( lobpcgxx REQUIRED )
+
+add_executable       ( sparsexx_lpcg_test test_lpcg.cxx                      )
+target_link_libraries( sparsexx_lpcg_test PUBLIC lobpcgxx::lobpcgxx sparsexx ) 

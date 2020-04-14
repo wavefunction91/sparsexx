@@ -61,8 +61,8 @@ public:
    */
   csr_matrix( size_type m, size_type n, size_type nnz,
     size_type indexing = 1) :
-    m_(m), n_(n), nnz_(nnz), nzval_(nnz), colind_(nnz),
-    rowptr_(m+1), indexing_(indexing) { }
+    m_(m), n_(n), nnz_(nnz), indexing_(indexing),
+    nzval_(nnz), colind_(nnz), rowptr_(m+1)  { }
 
   csr_matrix( const csr_matrix& other )          = default;
   csr_matrix( csr_matrix&& other      ) noexcept = default;
