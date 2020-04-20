@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.11 FATAL_ERROR )
+cmake_minimum_required( VERSION 3.14 FATAL_ERROR )
 project( sparsexx VERSION 0.1.0 LANGUAGES C CXX )
 
 # Append local cmake directory to find CMAKE Modules
@@ -14,13 +14,30 @@ find_package( IntelMKL REQUIRED COMPONENTS lp64 )
 find_package( MPI      REQUIRED                 )
 find_package( OpenMP   REQUIRED                 )
 
-set( GKLIB_PATH ${PROJECT_SOURCE_DIR}/metis-5.1.0/GKlib CACHE PATH  "path to GKlib" )
-add_subdirectory( metis-5.1.0 )
+
+#cmake_policy( SET CMP0079 NEW )
+cmake_policy( VERSION 3.14 )
+include( FetchContent )
+
+FetchContent_Declare(
+  metis_download
+  URL http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/metis-5.1.0.tar.gz
+  #GIT_REPOSITORY https://github.com/KarypisLab/METIS.git
+)
+
+if(NOT metis_download_POPULATED)
+  FetchContent_Populate(metis_download)
+  set( GKLIB_PATH ${metis_download_SOURCE_DIR}/GKlib CACHE PATH  "path to GKlib" )
+  add_subdirectory(${metis_download_SOURCE_DIR} ${metis_download_BINARY_DIR})
+  target_link_libraries( metis OpenMP::OpenMP_C )
+  target_include_directories( metis PUBLIC ${metis_download_SOURCE_DIR}/include )
+endif()
+
 
 add_library               ( sparsexx INTERFACE                               )
 target_compile_features   ( sparsexx INTERFACE cxx_std_17                    )
 target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl MPI::MPI_CXX OpenMP::OpenMP_CXX metis )
-target_include_directories( sparsexx INTERFACE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/metis-5.1.0/include )
+target_include_directories( sparsexx INTERFACE ${PROJECT_SOURCE_DIR}/include )
 
 target_compile_options( sparsexx INTERFACE "-Wall" "-Wextra" "-Wpedantic" "-Wnon-virtual-dtor")
 
