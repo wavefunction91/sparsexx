@@ -31,4 +31,19 @@ template <typename SpMatType, typename U = void>
 using enable_if_csr_matrix_t = typename enable_if_csr_matrix<SpMatType,U>::type;
 
 
+
+
+template <typename SpMatType>
+using value_type_t = typename SpMatType::value_type;
+
+
+template <typename SpMatType>
+using size_type_t = typename SpMatType::size_type;
+
+template <typename SpMatType>
+using index_type_t = typename SpMatType::index_type;
+
+
+
+
 }

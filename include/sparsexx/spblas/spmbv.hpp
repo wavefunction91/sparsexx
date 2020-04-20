@@ -1,50 +1,9 @@
 #pragma once
 
-#include <sparsexx/matrix_types/csr_matrix.hpp>
-#include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
-#include <iostream>
+
+#include <sparsexx/spblas/type_traits.hpp>
 
 namespace sparsexx::spblas {
-
-namespace detail {
-
-  template <typename SpMatType, typename ALPHAT, typename BETAT>
-  struct are_alpha_beta_convertible {
-    inline static constexpr bool value =
-      std::is_convertible_v< ALPHAT, typename SpMatType::value_type > and
-      std::is_convertible_v< BETAT,  typename SpMatType::value_type >;
-  };
-
-  template <typename SpMatType, typename ALPHAT, typename BETAT>
-  inline constexpr bool are_alpha_beta_convertible_v = 
-    are_alpha_beta_convertible<SpMatType, ALPHAT, BETAT>::value;
-  
-
-  template <typename SpMatType, typename ALPHAT, typename BETAT>
-  struct spmbv_uses_mkl {
-    inline static constexpr bool value =
-      are_alpha_beta_convertible_v<SpMatType, ALPHAT, BETAT> and
-      sparsexx::detail::mkl::is_mkl_sparse_matrix_v<SpMatType>;
-  };
-
-  template <typename SpMatType, typename ALPHAT, typename BETAT>
-  inline constexpr bool spmbv_uses_mkl_v =
-    spmbv_uses_mkl<SpMatType, ALPHAT, BETAT>::value;
-
-
-  template <typename SpMatType, typename ALPHAT, typename BETAT>
-  struct spmbv_uses_generic_csr {
-    inline static constexpr bool value =
-      are_alpha_beta_convertible_v<SpMatType, ALPHAT, BETAT> and
-      sparsexx::detail::is_csr_matrix_v<SpMatType> and
-      not spmbv_uses_mkl_v<SpMatType, ALPHAT, BETAT>;
-  };
-
-  template <typename SpMatType, typename ALPHAT, typename BETAT>
-  inline constexpr bool spmbv_uses_generic_csr_v =
-    spmbv_uses_generic_csr<SpMatType, ALPHAT, BETAT>::value;
-}
-
 
 /**
  *  @brief Generic CSR sparse matrix - dense block vector product.
@@ -79,7 +38,7 @@ std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
   const value_type alpha = ALPHA;
   const value_type beta  = BETA;
 
-  const auto  N = A.n();
+  const auto  N = A.m();
   const auto* Anz = A.nzval().data();
   const auto* Arp = A.rowptr().data();
   const auto* Aci = A.colind().data();
@@ -99,11 +58,12 @@ std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
     const auto* Aci_st = Aci + j_st;
 
     value_type av = 0.;
-    for( int64_t j = 0; j < j_ext; ++j )
+    for( int64_t j = 0; j < j_ext; ++j ) {
       av += Anz_st[j] * V_k[ Aci_st[j] ];
+    }
 
 
-    AV[ i + k*LDV ] = alpha * av + beta * AV[ i + k*LDV ];
+    AV[ i + k*LDAV ] = alpha * av + beta * AV[ i + k*LDAV ];
   }
 
 

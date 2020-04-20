@@ -231,4 +231,69 @@ template <typename SpMatType,
   return tr;
 }
 
+
+
+
+
+
+template <typename SpMatType>
+detail::enable_if_csr_matrix_t< SpMatType,
+  std::tuple<
+    std::vector< detail::index_type_t<SpMatType> >,
+    std::vector< detail::index_type_t<SpMatType> >
+  >> extract_adjacency_base0( const SpMatType& A ) {
+
+  const auto M = A.m();
+  //const auto N = A.n();
+
+  const auto* Anz = A.nzval().data();
+  const auto* Arp = A.rowptr().data();
+  const auto* Aci = A.colind().data();
+  const auto  indexing = A.indexing();
+
+  using index_t = detail::index_type_t<SpMatType>;
+  std::vector< index_t > rowptr(M+1), colind( A.nnz() );
+
+  rowptr[0] = 0;
+  auto* ci_st = colind.data();
+
+  // Get number of diagonal elements
+  int64_t ndiag = 0;
+  for( index_t i = 0; i < M; ++i ) {
+
+    const auto j_st  = Arp[i]   - indexing;
+    const auto j_en  = Arp[i+1] - indexing;
+  
+    const auto* Aci_st = Aci + j_st;
+    const auto* Aci_en = Aci + j_en;
+
+    const auto diag_it = std::find( Aci_st, Aci_en, i+indexing );
+
+    // Copy values to left of diagonal
+    ci_st = std::copy( Aci_st, diag_it, ci_st );
+
+
+    auto nrow = std::distance( Aci_st, Aci_en );
+    if( diag_it != Aci_en ) {
+      ndiag++;
+      rowptr[i+1] = rowptr[i] + nrow - 1;
+
+      // Copy values right of diagonal
+      ci_st = std::copy(diag_it+1, Aci_en, ci_st );
+    } else rowptr[i+1] = rowptr[i] + nrow;
+
+  }
+
+  colind.resize( A.nnz() - ndiag );
+  for( auto& i : colind ) i -= indexing;
+
+  return std::tuple( rowptr, colind );
+
+
+}
+
+
+
+
+
 }

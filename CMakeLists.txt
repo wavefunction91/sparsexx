@@ -11,10 +11,16 @@ list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules/linalg-modules")
 
 find_package( IntelMKL REQUIRED COMPONENTS lp64 )
+find_package( MPI      REQUIRED                 )
+find_package( OpenMP   REQUIRED                 )
+
+set( GKLIB_PATH ${PROJECT_SOURCE_DIR}/metis-5.1.0/GKlib CACHE PATH  "path to GKlib" )
+add_subdirectory( metis-5.1.0 )
+
 add_library               ( sparsexx INTERFACE                               )
 target_compile_features   ( sparsexx INTERFACE cxx_std_17                    )
-target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl                 )
-target_include_directories( sparsexx INTERFACE ${PROJECT_SOURCE_DIR}/include )
+target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl MPI::MPI_CXX OpenMP::OpenMP_CXX metis )
+target_include_directories( sparsexx INTERFACE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/metis-5.1.0/include )
 
 target_compile_options( sparsexx INTERFACE "-Wall" "-Wextra" "-Wpedantic" "-Wnon-virtual-dtor")
 
@@ -26,8 +32,14 @@ target_link_libraries( sparsexx_ls_test PUBLIC sparsexx )
 add_executable       ( sparsexx_mkl_feast_test test_mkl_feast.cxx )
 target_link_libraries( sparsexx_mkl_feast_test PUBLIC sparsexx    )
 
-add_executable       ( sparsexx_submat_test test_submat.cxx     )
+add_executable       ( sparsexx_submat_test test_submat.cxx )
 target_link_libraries( sparsexx_submat_test PUBLIC sparsexx )
+
+add_executable       ( sparsexx_dist_test test_dist.cxx   )
+target_link_libraries( sparsexx_dist_test PUBLIC sparsexx )
+
+add_executable       ( sparsexx_perm_test test_perm.cxx   )
+target_link_libraries( sparsexx_perm_test PUBLIC sparsexx )
 
 
 #set( EVSL_DIR ${PROJECT_SOURCE_DIR}/EVSL/install_mic          )
@@ -66,10 +78,11 @@ target_link_libraries( sparsexx_submat_test PUBLIC sparsexx )
 
 
 
-set( lobpcgxx_DIR   "$ENV{HOME}/devel/lobpcgxx/install_lobpcgxx_xg/lib64/cmake/lobpcgxx"     )
-set( blaspp_DIR     "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/blaspp" )
-set( lapackpp_DIR   "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/lapackpp" )
-find_package( lobpcgxx REQUIRED )
+#set( lobpcgxx_DIR   "$ENV{HOME}/devel/lobpcgxx/install_lobpcgxx_xg/lib64/cmake/lobpcgxx"     )
+#set( blaspp_DIR     "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/blaspp" )
+#set( lapackpp_DIR   "$ENV{HOME}/devel/lobpcgxx/install_icl_xg/lib/lapackpp" )
+#find_package( lobpcgxx REQUIRED )
+#
+#add_executable       ( sparsexx_lpcg_test test_lpcg.cxx                      )
+#target_link_libraries( sparsexx_lpcg_test PUBLIC lobpcgxx::lobpcgxx sparsexx ) 
 
-add_executable       ( sparsexx_lpcg_test test_lpcg.cxx                      )
-target_link_libraries( sparsexx_lpcg_test PUBLIC lobpcgxx::lobpcgxx sparsexx ) 
