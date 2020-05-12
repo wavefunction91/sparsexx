@@ -1,18 +1,19 @@
 #pragma once
 
+#include <algorithm>
 #include "type_fwd.hpp"
 
 namespace sparsexx {
 
 /**
- *  @brief A class to manipulate sparse matrices stored in CSR format
+ *  @brief A class to manipulate sparse matrices stored in coordiate (COO) format
  *
  *  @tparam T       Field over which the elements of the sparse matrix are defined
  *  @tparam index_t Integer type for the sparse indices
  *  @tparam Alloc   Allocator type for internal storage
  */
 template < typename T, typename index_t, typename Alloc >
-class csr_matrix {
+class coo_matrix {
 
 public:
 
@@ -38,39 +39,30 @@ protected:
 
   internal_storage< T >       nzval_;  ///< Storage of the non-zero values
   internal_storage< index_t > colind_; ///< Storage of the column indices
-  internal_storage< index_t > rowptr_; 
-    ///< Storage of the starting indices for each row of the sparse matrix
+  internal_storage< index_t > rowind_; ///< Storage of the row indices
 
 public:
 
-  csr_matrix() = default;
+  coo_matrix() = default;
 
   /**
-   *  @brief Construct a CSR matrix.
+   *  @brief Construct a COO matrix.
    *
    *  @param[in] m    Number of rows in the sparse matrix
    *  @param[in] n    Number of columns in the sparse matrix
    *  @param[in] nnz  Number of non-zeros in the sparse matrix
    *  @param[in] indexing Indexing base (default 1)
    */
-  csr_matrix( size_type m, size_type n, size_type nnz,
+  coo_matrix( size_type m, size_type n, size_type nnz,
     size_type indexing = 1) :
     m_(m), n_(n), nnz_(nnz), indexing_(indexing),
-    nzval_(nnz), colind_(nnz), rowptr_(m+1)  { }
+    nzval_(nnz), colind_(nnz), rowind_(nnz)  { }
 
-  csr_matrix( const csr_matrix& other )          = default;
-  csr_matrix( csr_matrix&& other      ) noexcept = default;
+  coo_matrix( const coo_matrix& other )          = default;
+  coo_matrix( coo_matrix&& other      ) noexcept = default;
 
-  csr_matrix& operator=( const csr_matrix& )          = default;
-  csr_matrix& operator=( csr_matrix&&      ) noexcept = default;
-
-  // Convert between sparse formats
-  csr_matrix( const coo_matrix<T, index_t, Alloc>& other );
-  csr_matrix& operator=( const coo_matrix<T, index_t, Alloc>& other );
-
-
-
-
+  coo_matrix& operator=( const coo_matrix& )          = default;
+  coo_matrix& operator=( coo_matrix&&      ) noexcept = default;
 
   /**
    *  @brief Get the number of rows in the sparse matrix
@@ -102,72 +94,88 @@ public:
 
   /**
    *  @brief Access the non-zero values of the sparse matrix in 
-   *  CSR format
+   *  COO format
    *
    *  Non-const variant
    *
    *  @returns A non-const reference to the internal storage of the
-   *  non-zero elements of the sparse matrix in CSR format
+   *  non-zero elements of the sparse matrix in COO format
    */
   auto& nzval()  { return nzval_; };
 
   /**
    *  @brief Access the column indices of the sparse matrix in 
-   *  CSR format
+   *  COO format
    *
    *  Non-const variant
    *
    *  @returns A non-const reference to the internal storage of the
-   *  column indices of the sparse matrix in CSR format
+   *  column indices of the sparse matrix in COO format
    */
   auto& colind() { return colind_; };
 
   /**
-   *  @brief Access the row pointer indirection array of the sparse matrix in 
-   *  CSR format
+   *  @brief Access the row indices of the sparse matrix in 
+   *  COO format
    *
    *  Non-const variant
    *
    *  @returns A non-const reference to the internal storage of the
-   *  row pointer indirection array of the sparse matrix in CSR format
+   *  row indices of the sparse matrix in COO format
    */
-  auto& rowptr() { return rowptr_; };
+  auto& rowind() { return rowind_; };
 
   /**
    *  @brief Access the non-zero values of the sparse matrix in 
-   *  CSR format
+   *  COO format
    *
    *  Const variant
    *
    *  @returns A const reference to the internal storage of the
-   *  non-zero elements of the sparse matrix in CSR format
+   *  non-zero elements of the sparse matrix in COO format
    */
   const auto& nzval () const { return nzval_; };
 
   /**
    *  @brief Access the column indices of the sparse matrix in 
-   *  CSR format
+   *  COO format
    *
    *  Const variant
    *
    *  @returns A const reference to the internal storage of the
-   *  column indices of the sparse matrix in CSR format
+   *  column indices of the sparse matrix in COO format
    */
-
   const auto& colind() const { return colind_; };
+
   /**
-   *  @brief Access the row pointer indirection array of the sparse matrix in 
-   *  CSR format
+   *  @brief Access the row indices of the sparse matrix in 
+   *  COO format
    *
    *  Const variant
    *
    *  @returns A const reference to the internal storage of the
-   *  row pointer indirection array of the sparse matrix in CSR format
+   *  row indices of the sparse matrix in COO format
    */
-  const auto& rowptr() const { return rowptr_; };
+  const auto& rowind() const { return rowind_; };
 
-}; // class csr_matrix
 
-} // namespace sparsexx
 
-#include "conversions.hpp"
+  void determine_indexing_from_adj() {
+    auto eq_zero = [](const auto x){ return x == 0; };
+    bool zero_based = std::any_of( rowind_.begin(), rowind_.end(), eq_zero ) or
+                      std::any_of( colind_.begin(), colind_.end(), eq_zero );
+    indexing_ = !zero_based;
+  }
+
+
+
+  void sort_by_row_index();
+
+  bool is_sorted_by_row_index() const {
+    return std::is_sorted( rowind_.begin(), rowind_.end() );
+  }
+
+
+}; // coo_matrix
+
+}

@@ -1,7 +1,10 @@
 #pragma once
 
 #include "csr_matrix.hpp"
+#include "coo_matrix.hpp"
 #include <stdexcept>
+
+
 namespace sparsexx {
 
 template <typename... Args>
@@ -29,6 +32,34 @@ void convert_to_dense( const csr_matrix<Args...>& A,
     const auto* Aci_st = Aci + j_st;
     for( int64_t j = 0; j < j_ext; ++j )
       Ad_i[ Aci_st[j]*LDAD ] = Anz_st[j];
+  }
+
+}
+
+
+
+
+
+
+
+template <typename... Args>
+void convert_to_dense( const coo_matrix<Args...>& A, 
+  typename coo_matrix<Args...>::value_type* A_dense, int64_t LDAD ) {
+
+  const int64_t M = A.m();
+  //const int64_t N = A.n();
+
+  if( M > LDAD ) throw std::runtime_error("M > LDAD");
+
+  const auto* Anz = A.nzval().data();
+  const auto* Ari = A.rowind().data();
+  const auto* Aci = A.colind().data();
+  const auto  indexing = A.indexing();
+  const auto  nnz = A.nnz();
+
+  #pragma omp parallel for
+  for( int64_t i = 0; i < nnz; ++i ) {
+    A_dense[ Ari[i] + Aci[i]*LDAD ] = Anz[i];
   }
 
 }

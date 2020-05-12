@@ -20,7 +20,8 @@ int main( int argc, char** argv ) {
   std::shared_ptr<sparsexx::mkl_csr_matrix<double,MKL_INT>> A_mkl_ptr = nullptr;
   {
   auto read_st = std::chrono::high_resolution_clock::now();
-  auto A = sparsexx::read_mm<double,MKL_INT>( std::string( argv[1] ) );
+  using spmat_type = sparsexx::csr_matrix<double, MKL_INT>;
+  auto A = sparsexx::read_mm<spmat_type>( std::string( argv[1] ) );
   auto read_en = std::chrono::high_resolution_clock::now();
 
   auto copy_st = std::chrono::high_resolution_clock::now();

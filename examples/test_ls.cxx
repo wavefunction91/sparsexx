@@ -20,9 +20,8 @@
 
 int main( int argc, char** argv ) {
   assert( argc == 2 );
-  auto A = sparsexx::read_mm<double,sparsexx::detail::mkl::int_type>( 
-    std::string( argv[1] ) 
-  );
+  using spmat_type = sparsexx::csr_matrix<double, MKL_INT>;
+  auto A = sparsexx::read_mm<spmat_type>( std::string( argv[1] ) );
   const int N = A.m();
   const int K = 400;
 

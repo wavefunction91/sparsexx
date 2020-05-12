@@ -25,6 +25,11 @@ FetchContent_Declare(
   #GIT_REPOSITORY https://github.com/KarypisLab/METIS.git
 )
 
+FetchContent_Declare(
+  range_v3_download
+  GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
+)
+
 if(NOT metis_download_POPULATED)
   FetchContent_Populate(metis_download)
   set( GKLIB_PATH ${metis_download_SOURCE_DIR}/GKlib CACHE PATH  "path to GKlib" )
@@ -34,9 +39,15 @@ if(NOT metis_download_POPULATED)
 endif()
 
 
+if(NOT range_v2_download_POPULATED)
+  FetchContent_Populate( range_v3_download )
+  add_subdirectory(${range_v3_download_SOURCE_DIR} ${range_v3_download_BINARY_DIR})
+endif()
+
+
 add_library               ( sparsexx INTERFACE                               )
 target_compile_features   ( sparsexx INTERFACE cxx_std_17                    )
-target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl MPI::MPI_CXX OpenMP::OpenMP_CXX metis )
+target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl MPI::MPI_CXX OpenMP::OpenMP_CXX metis range-v3 )
 target_include_directories( sparsexx INTERFACE ${PROJECT_SOURCE_DIR}/include )
 
 target_compile_options( sparsexx INTERFACE "-Wall" "-Wextra" "-Wpedantic" "-Wnon-virtual-dtor")

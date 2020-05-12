@@ -35,7 +35,8 @@ void output_sparse_matrix( std::ostream& out, const SpMatType& A ) {
 int main( int argc, char** argv ) {
 
   assert( argc == 2 );
-  auto A = sparsexx::read_mm<double,int32_t>( std::string( argv[1] ) );
+  using spmat_type = sparsexx::csr_matrix<double, int32_t>;
+  auto A = sparsexx::read_mm<spmat_type>( std::string( argv[1] ) );
   const int N = A.m();
 
   std::vector<int32_t> perm = { 0, 2, 3, 1 };
