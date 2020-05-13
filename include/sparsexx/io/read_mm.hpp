@@ -8,8 +8,6 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <range/v3/all.hpp>
-
 namespace sparsexx {
 
 #if 0

@@ -64,6 +64,9 @@ public:
   coo_matrix& operator=( const coo_matrix& )          = default;
   coo_matrix& operator=( coo_matrix&&      ) noexcept = default;
 
+
+  coo_matrix( const csr_matrix<T, index_t, Alloc>& other ); 
+
   /**
    *  @brief Get the number of rows in the sparse matrix
    *
@@ -175,7 +178,11 @@ public:
     return std::is_sorted( rowind_.begin(), rowind_.end() );
   }
 
+  void expand_from_triangle();
 
 }; // coo_matrix
 
 }
+
+
+#include "coo_matrix_ops.hpp"

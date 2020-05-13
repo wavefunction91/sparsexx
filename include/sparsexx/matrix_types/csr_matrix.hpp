@@ -66,7 +66,7 @@ public:
 
   // Convert between sparse formats
   csr_matrix( const coo_matrix<T, index_t, Alloc>& other );
-  csr_matrix& operator=( const coo_matrix<T, index_t, Alloc>& other );
+  //csr_matrix& operator=( const coo_matrix<T, index_t, Alloc>& other );
 
 
 

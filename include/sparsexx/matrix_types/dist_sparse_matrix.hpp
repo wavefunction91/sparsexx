@@ -128,6 +128,7 @@ public:
   using value_type = detail::value_type_t<SpMatType>;
   using index_type = detail::index_type_t<SpMatType>;
   using size_type  = detail::size_type_t<SpMatType>;
+  using tile_type  = SpMatType;
 
   struct sparse_tile {
 
