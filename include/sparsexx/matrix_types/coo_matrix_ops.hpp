@@ -1,14 +1,20 @@
 #pragma once
 
 #include "coo_matrix.hpp"
-#include <range/v3/all.hpp>
 #include <iostream>
+
+#if SPARSEXX_ENABLE_RANGES_V3
+#include <range/v3/all.hpp>
+#endif
+#include <algorithm>
+#include <numeric>
 
 namespace sparsexx {
 
 template <typename T, typename index_t, typename Alloc>
 void coo_matrix<T,index_t,Alloc>::sort_by_row_index() {
 
+#if SPARSEXX_ENABLE_RANGES_V3
   auto coo_zip = ranges::views::zip( rowind_, colind_, nzval_ );
 
   // Sort lex by row index
@@ -23,6 +29,33 @@ void coo_matrix<T,index_t,Alloc>::sort_by_row_index() {
     else if( i1 > i2 ) return false;
     else               return j1 < j2;
   });
+#else
+
+  std::vector<index_t> indx(nnz_);
+  std::iota( indx.begin(), indx.end(), 0 );
+
+  std::sort(indx.begin(), indx.end(),[&]( auto i, auto j ) {
+
+    if( rowind_[i] < rowind_[j] )      return true;
+    else if( rowind_[j] < rowind_[i] ) return false;
+    else                               return colind_[i] < colind_[j];
+
+  });
+
+  std::vector<index_t> new_rowind_(nnz_), new_colind_(nnz_);
+  std::vector<T>       new_nzval_(nnz_);
+
+  for( int64_t i = 0; i < nnz_; ++i ) {
+    new_rowind_[i] = rowind_[indx[i]];
+    new_colind_[i] = colind_[indx[i]];
+    new_nzval_[i]  = nzval_[indx[i]];
+  }
+
+  rowind_ = std::move( new_rowind_ );
+  colind_ = std::move( new_colind_ );
+  nzval_  = std::move( new_nzval_ );
+
+#endif
 
 
 }
@@ -31,8 +64,12 @@ template <typename T, typename index_t, typename Alloc>
 void coo_matrix<T,index_t,Alloc>::expand_from_triangle() {
 
   std::cout << "Expanding Triangle" << std::endl;
-  auto idx_zip = ranges::views::zip( rowind_, colind_ );
 
+
+
+#if SPARSEXX_ENABLE_RANGES_V3
+
+  auto idx_zip = ranges::views::zip( rowind_, colind_ );
 
   auto lt_check = []( const std::tuple<index_type,index_type>& p ) {
     return std::get<0>(p) <= std::get<1>(p);
@@ -43,6 +80,25 @@ void coo_matrix<T,index_t,Alloc>::expand_from_triangle() {
 
   bool lower_triangle = ranges::all_of( idx_zip, lt_check );
   bool upper_triangle = ranges::all_of( idx_zip, ut_check );
+
+#else
+
+  bool upper_triangle, lower_triangle;
+  {
+    std::vector<index_t> indx( nnz_ );
+    std::iota( indx.begin(), indx.end(), 0);
+    auto lt_check = [&]( auto i ) {
+      return rowind_[i] <= colind_[i];
+    };
+    auto ut_check = [&]( auto i ) {
+      return rowind_[i] >= colind_[i];
+    };
+
+    lower_triangle = std::all_of( indx.begin(), indx.end(), lt_check );
+    upper_triangle = std::all_of( indx.begin(), indx.end(), ut_check );
+  }
+
+#endif
   bool diagonal       = lower_triangle and upper_triangle;
   bool full_matrix    = (not lower_triangle) and (not upper_triangle);
  
