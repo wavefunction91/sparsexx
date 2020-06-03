@@ -1,4 +1,5 @@
 #pragma once
+#if SPARSEXX_ENABLE_MKL
 
 #include "mkl_types.hpp"
 #include "mkl_exceptions.hpp"
@@ -77,3 +78,4 @@ enable_if_mkl_compatible_t<SpMatType,std::unique_ptr<sparse_wrapper_pimpl>>
 
 
 }
+#endif

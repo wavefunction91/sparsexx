@@ -1,4 +1,5 @@
 #pragma once
+#if SPARSEXX_ENABLE_MKL
 
 #include <sparsexx/matrix_types/csr_matrix.hpp>
 #include <memory>
@@ -84,3 +85,4 @@ using enable_if_mkl_sparse_matrix_t = typename
 }
 
 }
+#endif

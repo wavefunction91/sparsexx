@@ -1,4 +1,5 @@
 #pragma once
+#if SPARSEXX_ENABLE_MKL
 
 #include "mkl_types.hpp"
 #include <sparsexx/matrix_types/type_traits.hpp>
@@ -64,3 +65,4 @@ template <typename SpMatType, typename U = void>
 using enable_if_mkl_compatible_t = typename enable_if_mkl_compatible<SpMatType,U>::type;
 
 }
+#endif

@@ -1,4 +1,5 @@
 #pragma once
+#if SPARSEXX_ENABLE_MKL
 
 #include <sparsexx/matrix_types/type_traits.hpp>
 #include <sparsexx/spsolve/bunch_kaufman.hpp>
@@ -180,3 +181,4 @@ std::unique_ptr< detail::bunch_kaufman_pimpl<SpMatType> >
 }
 
 }
+#endif

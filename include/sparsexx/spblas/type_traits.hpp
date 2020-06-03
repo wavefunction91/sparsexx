@@ -1,7 +1,10 @@
 #pragma once
 
 #include <sparsexx/matrix_types/csr_matrix.hpp>
+
+#if SPARSEXX_ENABLE_MKL
 #include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
+#endif
 
 namespace sparsexx::spblas::detail {
 
@@ -17,6 +20,8 @@ inline constexpr bool are_alpha_beta_convertible_v =
   are_alpha_beta_convertible<SpMatType, ALPHAT, BETAT>::value;
 
 
+#if SPARSEXX_ENABLE_MKL
+
 template <typename SpMatType, typename ALPHAT, typename BETAT>
 struct spmbv_uses_mkl {
   inline static constexpr bool value =
@@ -24,9 +29,18 @@ struct spmbv_uses_mkl {
     sparsexx::detail::mkl::is_mkl_sparse_matrix_v<SpMatType>;
 };
 
+#else
+
+template <typename SpMatType, typename ALPHAT, typename BETAT>
+struct spmbv_uses_mkl : public std::false_type { };
+
+#endif
+
 template <typename SpMatType, typename ALPHAT, typename BETAT>
 inline constexpr bool spmbv_uses_mkl_v =
   spmbv_uses_mkl<SpMatType, ALPHAT, BETAT>::value;
+
+
 
 
 template <typename SpMatType, typename ALPHAT, typename BETAT>

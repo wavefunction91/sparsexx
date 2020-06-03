@@ -1,8 +1,13 @@
+if( SPARSEXX_ENABLE_MKL )
 add_executable       ( sparsexx_ls_test test_ls.cxx     )
 target_link_libraries( sparsexx_ls_test PUBLIC sparsexx )
 
 add_executable       ( sparsexx_mkl_feast_test test_mkl_feast.cxx )
 target_link_libraries( sparsexx_mkl_feast_test PUBLIC sparsexx    )
+
+add_executable       ( sparsexx_spmm_test test_spmm.cxx     )
+target_link_libraries( sparsexx_spmm_test PUBLIC sparsexx )
+endif()
 
 add_executable       ( sparsexx_submat_test test_submat.cxx )
 target_link_libraries( sparsexx_submat_test PUBLIC sparsexx )
@@ -13,8 +18,6 @@ target_link_libraries( sparsexx_dist_test PUBLIC sparsexx )
 add_executable       ( sparsexx_perm_test test_perm.cxx   )
 target_link_libraries( sparsexx_perm_test PUBLIC sparsexx )
 
-add_executable       ( sparsexx_spmm_test test_spmm.cxx     )
-target_link_libraries( sparsexx_spmm_test PUBLIC sparsexx )
 
 
 #add_executable       ( sparsexx_asci_proxy asci_proxy.cxx     )

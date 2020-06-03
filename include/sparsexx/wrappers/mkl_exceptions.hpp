@@ -1,4 +1,5 @@
 #pragma once
+#if SPARSEXX_ENABLE_MKL
 
 #include "mkl_types.hpp"
 #include <stdexcept>
@@ -158,3 +159,4 @@ public:
 };
 
 }
+#endif

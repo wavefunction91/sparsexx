@@ -69,6 +69,9 @@ std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
 
 }
 
+
+
+#if SPARSEXX_ENABLE_MKL
 /**
  *  @brief Optimized sparse matrix - dense block vector product.
  *
@@ -113,6 +116,7 @@ std::enable_if_t< detail::spmbv_uses_mkl_v<SpMatType, ALPHAT, BETAT> >
     throw sparsexx::detail::mkl::mkl_sparse_exception(stat);
 
 }
+#endif
 
 
 }
