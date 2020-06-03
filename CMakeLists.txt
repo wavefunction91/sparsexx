@@ -15,39 +15,78 @@ find_package( MPI      REQUIRED                 )
 find_package( OpenMP   REQUIRED                 )
 
 
+
+option( SPARSEXX_ENABLE_CEREAL    "Enable serialization via cereal" ON )
+option( SPARSEXX_ENABLE_RANGES_V3 "Enable Ranges-v3"                ON )
+
+
+
 #cmake_policy( SET CMP0079 NEW )
 cmake_policy( VERSION 3.14 )
 include( FetchContent )
 
+
+
+
+
+# METIS 
 FetchContent_Declare(
   metis_download
   URL http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/metis-5.1.0.tar.gz
   #GIT_REPOSITORY https://github.com/KarypisLab/METIS.git
 )
 
-FetchContent_Declare(
-  range_v3_download
-  GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
-)
-
+FetchContent_GetProperties(metis_download)
 if(NOT metis_download_POPULATED)
   FetchContent_Populate(metis_download)
   set( GKLIB_PATH ${metis_download_SOURCE_DIR}/GKlib CACHE PATH  "path to GKlib" )
   add_subdirectory(${metis_download_SOURCE_DIR} ${metis_download_BINARY_DIR})
-  target_link_libraries( metis OpenMP::OpenMP_C )
-  target_include_directories( metis PUBLIC ${metis_download_SOURCE_DIR}/include )
 endif()
+target_link_libraries( metis OpenMP::OpenMP_C )
+target_include_directories( metis PUBLIC ${metis_download_SOURCE_DIR}/include )
+
+set( SPARSEXX_EXTERNAL_LIBRARIES metis )
 
 
-if(NOT range_v2_download_POPULATED)
+# RANGES-V3
+FetchContent_Declare(
+  range_v3_download
+  GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
+)
+FetchContent_GetProperties(range_v3_download)
+if(NOT range_v3_download_POPULATED)
   FetchContent_Populate( range_v3_download )
   add_subdirectory(${range_v3_download_SOURCE_DIR} ${range_v3_download_BINARY_DIR})
 endif()
+list(APPEND SPARSEXX_EXTERNAL_LIBRARIES range-v3)
+
+
+
+
+
+# CEREAL
+FetchContent_Declare(
+  cereal_download
+  GIT_REPOSITORY https://github.com/USCiLab/cereal.git
+)
+FetchContent_GetProperties(cereal_download)
+if(NOT cereal_download_POPULATED)
+  FetchContent_Populate( cereal_download )
+  add_library( cereal INTERFACE IMPORTED )
+  set_target_properties( cereal PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${cereal_download_SOURCE_DIR}/include"
+    INTERFACE_COMPILE_DEFINITIONS "CEREAL_THREAD_SAFE=1;SPARSEXX_ENABLE_CEREAL=1"
+  )
+endif()
+list(APPEND SPARSEXX_EXTERNAL_LIBRARIES cereal)
+
+message( STATUS ${SPARSEXX_EXTERNAL_LIBRARIES} )
 
 
 add_library               ( sparsexx INTERFACE                               )
 target_compile_features   ( sparsexx INTERFACE cxx_std_17                    )
-target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl MPI::MPI_CXX OpenMP::OpenMP_CXX metis range-v3 )
+target_link_libraries     ( sparsexx INTERFACE IntelMKL::mkl MPI::MPI_CXX OpenMP::OpenMP_CXX )
+target_link_libraries     ( sparsexx INTERFACE ${SPARSEXX_EXTERNAL_LIBRARIES} )
 target_include_directories( sparsexx INTERFACE ${PROJECT_SOURCE_DIR}/include )
 
 target_compile_options( sparsexx INTERFACE "-Wall" "-Wextra" "-Wpedantic" "-Wnon-virtual-dtor")

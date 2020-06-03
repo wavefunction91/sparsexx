@@ -2,6 +2,10 @@
 
 #include "type_fwd.hpp"
 
+#ifdef SPARSEXX_ENABLE_CEREAL
+  #include <cereal/types/vector.hpp>
+#endif
+
 namespace sparsexx {
 
 /**
@@ -165,6 +169,19 @@ public:
    *  row pointer indirection array of the sparse matrix in CSR format
    */
   const auto& rowptr() const { return rowptr_; };
+
+
+
+
+#ifdef SPARSEXX_ENABLE_CEREAL
+  template <class Archive>  
+  void serialize( Archive& ar ) {
+    ar( m_, n_, nnz_, indexing_, rowptr_, colind_, nzval_ );
+  }
+#endif
+
+
+
 
 }; // class csr_matrix
 

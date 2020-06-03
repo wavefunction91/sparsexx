@@ -3,6 +3,11 @@
 #include <algorithm>
 #include "type_fwd.hpp"
 
+
+#ifdef SPARSEXX_ENABLE_CEREAL
+  #include <cereal/types/vector.hpp>
+#endif
+
 namespace sparsexx {
 
 /**
@@ -179,6 +184,13 @@ public:
   }
 
   void expand_from_triangle();
+
+#ifdef SPARSEXX_ENABLE_CEREAL
+  template <class Archive>  
+  void serialize( Archive& ar ) {
+    ar( m_, n_, nnz_, indexing_, rowind_, colind_, nzval_ );
+  }
+#endif
 
 }; // coo_matrix
 

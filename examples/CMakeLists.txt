@@ -17,8 +17,8 @@ add_executable       ( sparsexx_spmm_test test_spmm.cxx     )
 target_link_libraries( sparsexx_spmm_test PUBLIC sparsexx )
 
 
-add_executable       ( sparsexx_asci_proxy asci_proxy.cxx     )
-target_link_libraries( sparsexx_asci_proxy PUBLIC sparsexx )
+#add_executable       ( sparsexx_asci_proxy asci_proxy.cxx     )
+#target_link_libraries( sparsexx_asci_proxy PUBLIC sparsexx )
 
 #set( EVSL_DIR ${PROJECT_SOURCE_DIR}/EVSL/install_mic          )
 #set( EVSL_LIBRARIES "${EVSL_DIR}/lib/libevsl.a;IntelMKL::mkl" )

@@ -5,6 +5,8 @@
 #include <sparsexx/spblas/spmbv.hpp>
 #include <sparsexx/spblas/pspmbv.hpp>
 #include <sparsexx/io/read_mm.hpp>
+#include <sparsexx/io/read_binary_triplets.hpp>
+#include <sparsexx/io/write_binary_triplets.hpp>
 
 #include <sparsexx/util/submatrix.hpp>
 #include <sparsexx/util/reorder.hpp>
@@ -40,6 +42,7 @@ int main( int argc, char** argv ) {
 
   assert( argc == 2 );
   using spmat_type = sparsexx::csr_matrix<double, int32_t>;
+  //auto A = sparsexx::read_binary_triplet<spmat_type>( std::string( argv[1] ) );
   auto A = sparsexx::read_mm<spmat_type>( std::string( argv[1] ) );
   const int N = A.m();
 
@@ -55,6 +58,7 @@ int main( int argc, char** argv ) {
   std::vector<index_t> col_tiling = { 0, N };
 
 
+  std::cout << "HERE" << std::endl;
 
   // Reordering
   if( world_rank == 0 ) {
@@ -62,9 +66,11 @@ int main( int argc, char** argv ) {
     std::stringstream ss;
     int64_t nparts = std::max(2l, world_size);
 
+    std::cout << "Partitioning..." << std::flush;
     auto part_st = std::chrono::high_resolution_clock::now();
     auto part = sparsexx::kway_partition( nparts, A );
     auto part_en = std::chrono::high_resolution_clock::now();
+    std::cout << "Done!" << std::endl;
 
     auto part_dur = std::chrono::duration<double,std::milli>( part_en - part_st ).count();
 
@@ -74,10 +80,12 @@ int main( int argc, char** argv ) {
          << std::count(part.begin(),part.end(), i)
          << std::endl;
 
+    std::cout << "Forming Perm...";
     auto fperm_st = std::chrono::high_resolution_clock::now();
     auto [perm, partptr] = 
       sparsexx::perm_from_part( nparts, part );
     auto fperm_en = std::chrono::high_resolution_clock::now();
+    std::cout << "Done!" << std::endl;
 
     auto fperm_dur = std::chrono::duration<double,std::milli>( fperm_en - fperm_st ).count();
 
@@ -90,10 +98,12 @@ int main( int argc, char** argv ) {
     //perm.at(2) = 3;
     //perm.at(3) = 1;
 
+    std::cout << "Permuting...";
     auto perm_st = std::chrono::high_resolution_clock::now();
     auto Ap = sparsexx::permute_rows( A, perm );
     auto perm_en = std::chrono::high_resolution_clock::now();
     auto perm_dur = std::chrono::duration<double,std::milli>( perm_en - perm_st ).count();
+    std::cout << "Done!" << std::endl;
 
     ss << std::scientific << std::setprecision(5);
     ss << "METIS DUR     = " << part_dur  << " ms" << std::endl;
@@ -107,11 +117,13 @@ int main( int argc, char** argv ) {
     //row_tiling = std::move(partptr); 
   }
 
-  MPI_Bcast( A.rowptr().data(), A.rowptr().size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
-  MPI_Bcast( A.colind().data(), A.colind().size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
-  MPI_Bcast( A.nzval().data(), A.nzval().size(), MPI_DOUBLE, 0, MPI_COMM_WORLD );
-  MPI_Bcast( row_tiling.data(), row_tiling.size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
-  MPI_Bcast( col_tiling.data(), col_tiling.size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
+  if( world_size > 1 ) {
+    MPI_Bcast( A.rowptr().data(), A.rowptr().size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
+    MPI_Bcast( A.colind().data(), A.colind().size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
+    MPI_Bcast( A.nzval().data(), A.nzval().size(), MPI_DOUBLE, 0, MPI_COMM_WORLD );
+    MPI_Bcast( row_tiling.data(), row_tiling.size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
+    MPI_Bcast( col_tiling.data(), col_tiling.size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
+  }
 
 
   sparsexx::dist_sparse_matrix<decltype(A)> dist_A( MPI_COMM_WORLD, N, N,
@@ -135,10 +147,10 @@ int main( int argc, char** argv ) {
 
     ss << "Local NNZ = " << local_tile.local_matrix.nnz() << std::endl;
 
-    std::vector<double> local_dense( local_tile.local_matrix.m() * local_tile.local_matrix.n() );
-    sparsexx::convert_to_dense( local_tile.local_matrix, local_dense.data(), local_tile.local_matrix.m() );
+    //std::vector<double> local_dense( local_tile.local_matrix.m() * local_tile.local_matrix.n() );
+    //sparsexx::convert_to_dense( local_tile.local_matrix, local_dense.data(), local_tile.local_matrix.m() );
 
-    //std::cout << ss.str();
+    std::cout << ss.str();
 
   }
 
