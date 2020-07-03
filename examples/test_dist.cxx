@@ -57,9 +57,6 @@ int main( int argc, char** argv ) {
 
   std::vector<index_t> col_tiling = { 0, N };
 
-
-  std::cout << "HERE" << std::endl;
-
   // Reordering
   if( world_rank == 0 ) {
 
@@ -126,7 +123,10 @@ int main( int argc, char** argv ) {
   }
 
 
-  sparsexx::dist_sparse_matrix<decltype(A)> dist_A( MPI_COMM_WORLD, N, N,
+  sparsexx::dist_csr_matrix<double,int32_t> dist_A( MPI_COMM_WORLD, N, N,
+    row_tiling, col_tiling );
+
+  sparsexx::dist_coo_matrix<double,int32_t> dist_coo( MPI_COMM_WORLD, N, N,
     row_tiling, col_tiling );
 
 

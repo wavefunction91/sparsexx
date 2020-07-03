@@ -101,23 +101,13 @@ static inline std::unique_ptr<dist_pmap>
 }
 
 
-template <typename SpMatType, typename... Args>
-static inline
-  detail::enable_if_csr_matrix_t<SpMatType,
-    std::unique_ptr<dist_pmap> >
+template <typename... Args>
+static inline std::unique_ptr<dist_pmap> 
   make_default_pmap( Args&&... args ) {
 
   return make_row_cyclic_pmap( std::forward<Args>(args)... );
 
 }
-
-
-
-
-
-
-
-
 
 
 template <typename SpMatType>
@@ -183,7 +173,7 @@ public:
     const std::vector<index_type>& rt,
     const std::vector<index_type>& ct ) :
     comm_(c), global_m_(M), global_n_(N), row_tiling_(rt),
-    col_tiling_(ct), pmap_( make_default_pmap<SpMatType>(c) ) { 
+    col_tiling_(ct), pmap_( make_default_pmap(c) ) { 
 
     local_tiles_ = std::move( populate_local_tiles( *pmap_, rt, ct ) );
   }
@@ -204,5 +194,10 @@ public:
   auto global_n() const { return global_n_; }
 
 };
+
+template <typename... Args>
+using dist_csr_matrix = dist_sparse_matrix<csr_matrix<Args...>>;
+template <typename... Args>
+using dist_coo_matrix = dist_sparse_matrix<coo_matrix<Args...>>;
 
 }
