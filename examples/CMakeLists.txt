@@ -18,8 +18,8 @@ target_link_libraries( sparsexx_dist_test PUBLIC sparsexx )
 add_executable       ( sparsexx_perm_test test_perm.cxx   )
 target_link_libraries( sparsexx_perm_test PUBLIC sparsexx )
 
-#add_executable       ( sparsexx_norm_test test_norm.cxx   )
-#target_link_libraries( sparsexx_norm_test PUBLIC sparsexx )
+add_executable       ( sparsexx_norm_test test_norm.cxx   )
+target_link_libraries( sparsexx_norm_test PUBLIC sparsexx )
 
 
 

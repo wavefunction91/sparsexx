@@ -84,7 +84,7 @@ int main( int argc, char** argv ) {
 
 #define TEST_COO_CORRECTNESS 1
 #if TEST_COO_CORRECTNESS
-  sparsexx::coo_matrix<double, MKL_INT> A_coo( A_mkl );
+  sparsexx::mkl_coo_matrix<double, MKL_INT> A_coo( A_mkl );
   std::vector<double> AV_coo( N*K );
   sparsexx::spblas::gespmbv( K, 1., A_mkl, V.data(), N, 0., AV.data(), N );
   sparsexx::spblas::gespmbv( K, 1., A_coo, V.data(), N, 0., AV_coo.data(), N );

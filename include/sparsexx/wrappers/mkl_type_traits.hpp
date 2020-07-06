@@ -45,6 +45,7 @@ struct is_mkl_compatible< SpMatType,
     is_mkl_type_supported_v< typename SpMatType::value_type > and
     ( // Supported matrix types
       is_csr_matrix_v<SpMatType>
+      or is_coo_matrix_v<SpMatType>
       // or is_csc_matrix_v<SpMatType>
     )
     >

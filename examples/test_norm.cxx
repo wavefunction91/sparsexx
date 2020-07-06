@@ -69,6 +69,9 @@ int main( int argc, char** argv ) {
 
   std::cout << "HERE" << std::endl;
 
+  // DBWY: FYI, you don't need this if you don't edit them per rank, what you
+  // created above will avoid that, it'll only be needed if you e.g. graph
+  // partition on the root rank to change the tiling
   if( world_size > 1 ) {
     MPI_Bcast( row_tiling.data(), row_tiling.size(), MPI_INT32_T, 0, MPI_COMM_WORLD );
     MPI_Bcast( col_tiling.data(), col_tiling.size(), MPI_INT32_T, 0, MPI_COMM_WORLD );

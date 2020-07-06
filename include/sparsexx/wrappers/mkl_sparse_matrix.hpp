@@ -2,6 +2,7 @@
 #if SPARSEXX_ENABLE_MKL
 
 #include <sparsexx/matrix_types/csr_matrix.hpp>
+#include <sparsexx/matrix_types/coo_matrix.hpp>
 #include <memory>
 
 #include "mkl_type_traits.hpp"
@@ -40,9 +41,8 @@ public:
   template <typename... Args>
   mkl_sparse_wrapper( Args&&... args ) :
     SpMatType( std::forward<Args>(args)... ),
-    pimpl_(detail::mkl::sparse_matrix_factory<SpMatType>(
-      this->indexing(), this->m(), this->n(), this->rowptr().data(),
-      this->colind().data(), this->nzval().data() )){ }
+    pimpl_(detail::mkl::sparse_matrix_factory<SpMatType>(this)) { }
+      
 
 
   auto&       handle()       { return pimpl_->mat; }
@@ -58,6 +58,8 @@ public:
 // Useful typedefs
 template <typename... Args>
 using mkl_csr_matrix = mkl_sparse_wrapper<csr_matrix<Args...>>;
+template <typename... Args>
+using mkl_coo_matrix = mkl_sparse_wrapper<coo_matrix<Args...>>;
 
 
 namespace detail::mkl {
