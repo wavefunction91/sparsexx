@@ -46,7 +46,7 @@ int main( int argc, char** argv ) {
     A_mkl.descr(),SPARSE_LAYOUT_COLUMN_MAJOR, K, NREP ); 
 
   auto opt_st = std::chrono::high_resolution_clock::now();
-  //A_mkl.optimize();
+  A_mkl.optimize();
   auto opt_en = std::chrono::high_resolution_clock::now();
   auto opt_dur = std::chrono::duration<double,std::milli>(opt_en-opt_st).count();
 

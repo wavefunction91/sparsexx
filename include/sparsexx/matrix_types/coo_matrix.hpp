@@ -197,4 +197,5 @@ public:
 }
 
 
+#include "coo_conversions.hpp"
 #include "coo_matrix_ops.hpp"
