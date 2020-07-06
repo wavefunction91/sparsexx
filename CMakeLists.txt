@@ -18,7 +18,7 @@ option( SPARSEXX_ENABLE_CEREAL    "Enable serialization via cereal" ON )
 option( SPARSEXX_ENABLE_RANGES_V3 "Enable Ranges-v3"                ON )
 
 if( SPARSEXX_ENABLE_MKL )
-  find_package( IntelMKL COMPONENTS lp64 )
+  find_package( IntelMKL COMPONENTS lp64 REQUIRED )
   if( TARGET IntelMKL::mkl )
     set( SPARSEXX_ENABLE_MKL ON )
     target_compile_definitions( IntelMKL::mkl INTERFACE "SPARSEXX_ENABLE_MKL=1" )

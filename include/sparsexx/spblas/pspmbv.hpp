@@ -6,7 +6,8 @@
 namespace sparsexx::spblas {
 
 template <typename SpMatType, typename ALPHAT, typename BETAT>
-std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
+//std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
+void
   pgespmbv_grv( int64_t K, ALPHAT ALPHA, const dist_sparse_matrix<SpMatType>& A,
     const typename SpMatType::value_type* V,  int64_t LDV,  BETAT BETA,
           typename SpMatType::value_type* AV, int64_t LDAV ) {
@@ -32,35 +33,12 @@ std::enable_if_t< detail::spmbv_uses_generic_csr_v<SpMatType, ALPHAT, BETAT> >
     const auto* V_local  = V  + col_st;
           auto* AV_local = AV + row_st;
 
-#if 0
-    std::stringstream ss;
-    ss << "Local GEMM PARAM " << sparsexx::detail::get_mpi_rank( A.comm() ) << ": ";
-    ss << row_st << ", " << row_en << "; ";
-    ss << col_st << ", " << col_en << "; " ;
-    ss << spmv_m << ", " << spmv_n << ", " << spmv_k << "; ";
-    ss << local_tile.local_matrix.m() << ", " << local_tile.local_matrix.n() << std::endl;
-    std::cout << ss.str();
-#endif
-
-
     gespmbv( spmv_n, ALPHA, local_tile.local_matrix, V_local, LDV, 
       1., AV_local, LDAV );
       
   }
 
 
-#if 0
-  std::stringstream ss;
-  ss << std::endl;
-  ss << "AV Before Allreduce " << sparsexx::detail::get_mpi_rank(A.comm()) << std::endl;
-  for( auto i = 0; i < A.global_m(); ++i ) {
-    for( auto j = 0; j < K; ++j )
-      ss << AV[ i + j*LDAV] << " ";
-    ss << std::endl;
-  }
-  ss << std::endl;
-  std::cout << ss.str();
-#endif
 
   auto comm = A.comm();
   MPI_Allreduce( MPI_IN_PLACE, AV, K*LDAV, 

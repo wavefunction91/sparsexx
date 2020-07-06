@@ -82,13 +82,12 @@ if( NOT intelmkl_PREFERED_MPI_LIBRARY )
 endif()
 
 if( NOT intelmkl_PREFIX )
-  if( $ENV{MKLROOT} )
+  if( DEFINED ENV{MKLROOT} )
     set( intelmkl_PREFIX $ENV{MKLROOT} )
   elseif( MKLROOT )
     set( intelmkl_PREFIX "${MKLROOT}" )
   endif()
 endif()
-
 
 
 # MKL Threads

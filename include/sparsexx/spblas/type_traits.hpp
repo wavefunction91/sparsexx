@@ -55,4 +55,18 @@ template <typename SpMatType, typename ALPHAT, typename BETAT>
 inline constexpr bool spmbv_uses_generic_csr_v =
   spmbv_uses_generic_csr<SpMatType, ALPHAT, BETAT>::value;
 
+
+
+template <typename SpMatType, typename ALPHAT, typename BETAT>
+struct spmbv_uses_generic_coo {
+  inline static constexpr bool value =
+    are_alpha_beta_convertible_v<SpMatType, ALPHAT, BETAT> and
+    sparsexx::detail::is_coo_matrix_v<SpMatType> and
+    not spmbv_uses_mkl_v<SpMatType, ALPHAT, BETAT>;
+};
+
+template <typename SpMatType, typename ALPHAT, typename BETAT>
+inline constexpr bool spmbv_uses_generic_coo_v =
+  spmbv_uses_generic_coo<SpMatType, ALPHAT, BETAT>::value;
+
 }

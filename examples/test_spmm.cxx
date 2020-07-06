@@ -81,5 +81,19 @@ int main( int argc, char** argv ) {
   std::cout << "MM Average    = " << mm_avg << " ms" << std::endl;
   std::cout << "MM StdDev     = " << mm_std << " ms" << std::endl;
 
+
+#define TEST_COO_CORRECTNESS 1
+#if TEST_COO_CORRECTNESS
+  sparsexx::coo_matrix<double, MKL_INT> A_coo( A_mkl );
+  std::vector<double> AV_coo( N*K );
+  sparsexx::spblas::gespmbv( K, 1., A_mkl, V.data(), N, 0., AV.data(), N );
+  sparsexx::spblas::gespmbv( K, 1., A_coo, V.data(), N, 0., AV_coo.data(), N );
+
+  double diff_nrm = 0.;
+  for( auto i = 0; i < K*N; ++i )
+    diff_nrm += std::abs(AV[i] - AV_coo[i]);
+  diff_nrm = std::sqrt(diff_nrm);
+  std::cout << "COO / CSR DIFF = " << diff_nrm << std::endl;
+#endif
   return 0;
 }
