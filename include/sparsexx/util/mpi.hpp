@@ -24,10 +24,18 @@ struct mpi_data;
 
 template <>
 struct mpi_data<double> {
-  inline static constexpr auto type = MPI_DOUBLE;
+  inline static auto type = MPI_DOUBLE;
 };
 
 template <typename T>
-inline static constexpr auto mpi_data_t = mpi_data<double>::type;
+inline static auto mpi_data_t = mpi_data<T>::type;
+
+//template <typename T>
+//struct mpi_data;
+//
+//template <>
+//struct mpi_data {
+//  inline static auto type() 
+//}
 
 }

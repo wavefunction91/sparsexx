@@ -13,6 +13,7 @@
 #include <sparsexx/util/reorder.hpp>
 
 #include <iostream>
+#include <sstream>
 #include <iterator>
 #include <iomanip>
 #include <random>

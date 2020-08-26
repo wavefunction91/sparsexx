@@ -13,7 +13,7 @@ list( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules/linalg-modul
 find_package( MPI      REQUIRED )
 find_package( OpenMP   REQUIRED )
 
-option( SPARSEXX_ENABLE_MKL       "Enable MKL Bindings"             ON )
+option( SPARSEXX_ENABLE_MKL       "Enable MKL Bindings"             OFF )
 option( SPARSEXX_ENABLE_CEREAL    "Enable serialization via cereal" ON )
 option( SPARSEXX_ENABLE_RANGES_V3 "Enable Ranges-v3"                ON )
 

@@ -21,6 +21,8 @@ target_link_libraries( sparsexx_perm_test PUBLIC sparsexx )
 add_executable       ( sparsexx_norm_test test_norm.cxx   )
 target_link_libraries( sparsexx_norm_test PUBLIC sparsexx )
 
+add_executable       ( sparsexx_ci_ham ci_ham.cxx   )
+target_link_libraries( sparsexx_ci_ham PUBLIC sparsexx )
 
 
 #add_executable       ( sparsexx_asci_proxy asci_proxy.cxx     )

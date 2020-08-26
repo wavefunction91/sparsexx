@@ -12,6 +12,7 @@
 #include <sparsexx/util/reorder.hpp>
 
 #include <iostream>
+#include <sstream>
 #include <iterator>
 #include <iomanip>
 #include <random>
@@ -61,7 +62,7 @@ int main( int argc, char** argv ) {
   if( world_rank == 0 ) {
 
     std::stringstream ss;
-    int64_t nparts = std::max(2l, world_size);
+    int64_t nparts = std::max(decltype(world_size)(2), world_size);
 
     std::cout << "Partitioning..." << std::flush;
     auto part_st = std::chrono::high_resolution_clock::now();
