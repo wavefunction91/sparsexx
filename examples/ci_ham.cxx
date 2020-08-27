@@ -1,6 +1,7 @@
 #include <sparsexx/matrix_types/csr_matrix.hpp>
 #include <sparsexx/matrix_types/coo_matrix.hpp>
 #include <sparsexx/matrix_types/dist_sparse_matrix.hpp>
+#include <sparsexx/util/submatrix.hpp>
 
 
 #include <cassert>
@@ -52,11 +53,12 @@ auto dets_to_coo_matrix_double_loop(
   }
 
   auto nnz = is.size();
-  sparsexx::coo_matrix<Args...> H( N, N, nnz );
+  sparsexx::coo_matrix<Args...> H( N, N, nnz, 0 );
   H.rowind() = std::move( is );
   H.colind() = std::move( js );
 
   return H;
+
 }
 
 template <typename SpMatType, typename... Args>
@@ -116,7 +118,7 @@ int main( int argc, char** argv ) {
 
   assert( det_strs.size() % 2 == 0 );
   size_t ndets      = det_strs.size() / 2;
-  size_t ndets_keep = std::min( ndets, 50000ul );
+  size_t ndets_keep = std::min( ndets, 100000ul );
 
   if( !world_rank ) {
     std::cout << "READ IN " << ndets << " DETERMINANT STRINGS" << std::endl;
@@ -142,6 +144,7 @@ int main( int argc, char** argv ) {
     
     std::fill( H_replicated.nzval().begin(),
                H_replicated.nzval().end(), 1 );
+      
   } );
 
   if( !world_rank )
@@ -152,13 +155,34 @@ int main( int argc, char** argv ) {
   dist_spmat_type H_dist;
   auto dist_formation_dur = time_op([&]() {
     
-    int32_t nrow_per_rank = N / world_size;
-    std::vector<int32_t> row_tiling(world_size + 1);
-    for( auto i = 0; i < world_size; ++i )
+#if 1
+    size_t npr = world_size;
+    size_t npc = 1;
+#else
+    int npr = std::sqrt(world_size);
+    int npc = world_size / npr;
+    int ngrid = npr * npc;
+    while( ngrid != world_size ) {
+      npr--;
+      npc = world_size / npr;
+      ngrid = npr * npc;
+    }
+#endif
+
+
+    int32_t nrow_per_rank = N / npr;
+    std::vector<int32_t> row_tiling(npr + 1);
+    for( auto i = 0; i < npr; ++i )
       row_tiling[i] = i * nrow_per_rank;
     row_tiling.back() = N;
 
-    std::vector<int32_t> col_tiling = { 0, N };
+    int32_t ncol_per_rank = N / npc;
+    std::vector<int32_t> col_tiling(npc + 1);
+    for( auto i = 0; i < npc; ++i )
+      col_tiling[i] = i * ncol_per_rank;
+    col_tiling.back() = N;
+
+    //std::vector<int32_t> col_tiling = { 0, N };
 
     H_dist = dist_spmat_type( MPI_COMM_WORLD, N, N, row_tiling, col_tiling);
 
@@ -179,6 +203,15 @@ int main( int argc, char** argv ) {
 
       local_tile.local_matrix = dets_to_sparse_matrix<spmat_type>(
         m_local, n_local, ialpha, ibeta, jalpha, jbeta );
+
+      auto lo = std::pair( (int64_t)row_st,  (int64_t)col_st  );
+      auto up = std::pair( (int64_t)row_end, (int64_t)col_end );
+      auto test_local_mat = extract_submatrix( H_replicated, lo, up );
+
+      if( local_tile.local_matrix.rowind() != test_local_mat.rowind() )
+        throw std::runtime_error("ROWIND DOESN'T MATCH");
+      if( local_tile.local_matrix.colind() != test_local_mat.colind() )
+        throw std::runtime_error("COLIND DOESN'T MATCH");
 
     }
 

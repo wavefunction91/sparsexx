@@ -67,4 +67,12 @@ template <typename SpMatType>
 using allocator_type_t = typename SpMatType::allocator_type;
 
 
+
+
+struct coo_matrix_tag {};
+struct csr_matrix_tag {};
+
+
+
+
 }

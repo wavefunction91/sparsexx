@@ -4,10 +4,13 @@
 
 namespace sparsexx {
 
-template <typename SpMatType, 
-  typename = detail::enable_if_csr_matrix_t<SpMatType>
-> SpMatType extract_submatrix( const SpMatType& A, 
-  std::pair<int64_t,int64_t> lo, std::pair<int64_t,int64_t> up) {
+
+
+template <typename SpMatType> 
+SpMatType extract_submatrix( const SpMatType& A, 
+                             std::pair<int64_t,int64_t> lo, 
+                             std::pair<int64_t,int64_t> up,
+                             detail::csr_matrix_tag ) {
 
   const auto M = A.m();
   const auto N = A.n();
@@ -89,6 +92,71 @@ template <typename SpMatType,
   for( auto& i : sub.colind() ) i -= col_lo; // Offset the columns bounds
 
   return sub;
+}
+
+template <typename SpMatType> 
+SpMatType extract_submatrix( const SpMatType& A, 
+                             std::pair<int64_t,int64_t> lo, 
+                             std::pair<int64_t,int64_t> up,
+                             detail::coo_matrix_tag ) {
+
+  const auto M   = A.m();
+  const auto N   = A.n();
+  const auto NNZ = A.nnz();
+
+  const auto* Anz = A.nzval().data();
+  const auto* Ari = A.rowind().data();
+  const auto* Aci = A.colind().data();
+  const auto  indexing = A.indexing();
+
+  const auto row_lo = lo.first;
+  const auto row_up = up.first;
+  const auto col_lo = lo.second;
+  const auto col_up = up.second;
+  const auto M_sub = row_up - row_lo;
+  const auto N_sub = col_up - col_lo;
+
+  // Count NNZ in the submatrix
+  size_t nnz_sub = 0;
+  for( size_t i = 0; i < NNZ; ++i )
+  if( (Aci[i]-indexing) >= col_lo and (Aci[i]-indexing) < col_up and
+      (Ari[i]-indexing) >= row_lo and (Ari[i]-indexing) < row_up ) nnz_sub++;
+
+  SpMatType sub( M_sub, N_sub, nnz_sub, indexing );
+  auto* sub_nz = sub.nzval().data();
+  auto* sub_ri = sub.rowind().data();
+  auto* sub_ci = sub.colind().data();
+
+  size_t isub = 0; 
+  for( size_t i = 0; i < NNZ; ++i )
+  if( (Aci[i]-indexing) >= col_lo and (Aci[i]-indexing) < col_up and
+      (Ari[i]-indexing) >= row_lo and (Ari[i]-indexing) < row_up ) {
+
+    sub_nz[isub] = Anz[i];
+    sub_ri[isub] = Ari[i] - row_lo;
+    sub_ci[isub] = Aci[i] - col_lo;
+
+    isub++;
+
+  }
+
+  return sub;
+
+  
+}
+
+
+template <typename SpMatType> 
+SpMatType extract_submatrix( const SpMatType& A, 
+                             std::pair<int64_t,int64_t> lo, 
+                             std::pair<int64_t,int64_t> up ) {
+
+
+  if constexpr ( detail::is_csr_matrix_v<SpMatType> )
+    return extract_submatrix( A, lo, up, detail::csr_matrix_tag() );
+  else
+    return extract_submatrix( A, lo, up, detail::coo_matrix_tag() );
+
 }
 
 
