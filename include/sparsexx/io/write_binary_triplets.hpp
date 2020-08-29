@@ -10,6 +10,29 @@
 
 namespace sparsexx {
 
+/**
+ *  @brief Write a sparse matrix to binary triplet file.
+ *
+ *  COO variant.
+ *
+ *  Binary Triplet Format:
+ *    4/8 bytes                Number of Rows
+ *    4/8 bytes                Number of Cols
+ *    8 bytes                  Number of Non-zero elements (NNZ)
+ *    NNZ * 4/8 bytes          Row indices of non-zero elements 
+ *    NNZ * 4/8 bytes          Col indices of non-zero elements 
+ *    NNZ * sizeof(T) bytes    Non-zero elements
+ *
+ *    4/8 for LP64 / ILP64 indexing, T is the storage type of the
+ *    non-zero elements of the matrix. All types are deduced from
+ *    the template parameter.
+ *
+ *    @tparam SpMatType Type of Sparse Matrix to write in triplet format
+ *
+ *    @param[in] A     Sparse matrix to write to disk.
+ *    @param[in] fname File name of resulting file.
+ *
+ */
 template <typename SpMatType>
 detail::enable_if_coo_matrix_t<SpMatType>
   write_binary_triplet( const SpMatType& A, std::string fname ) {
@@ -35,6 +58,29 @@ detail::enable_if_coo_matrix_t<SpMatType>
 
 
 
+/**
+ *  @brief Write a sparse matrix to binary triplet file.
+ *
+ *  CSR variant.
+ *
+ *  Binary Triplet Format:
+ *    4/8 bytes                Number of Rows
+ *    4/8 bytes                Number of Cols
+ *    8 bytes                  Number of Non-zero elements (NNZ)
+ *    NNZ * 4/8 bytes          Row indices of non-zero elements 
+ *    NNZ * 4/8 bytes          Col indices of non-zero elements 
+ *    NNZ * sizeof(T) bytes    Non-zero elements
+ *
+ *    4/8 for LP64 / ILP64 indexing, T is the storage type of the
+ *    non-zero elements of the matrix. All types are deduced from
+ *    the template parameter.
+ *
+ *    @tparam SpMatType Type of Sparse Matrix to write in triplet format
+ *
+ *    @param[in] A     Sparse matrix to write to disk.
+ *    @param[in] fname File name of resulting file.
+ *
+ */
 
 template <typename SpMatType>
 detail::enable_if_csr_matrix_t<SpMatType>

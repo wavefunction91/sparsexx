@@ -1,5 +1,5 @@
 #include <sparsexx/matrix_types/csr_matrix.hpp>
-#include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
+//#include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
 #include <sparsexx/matrix_types/type_traits.hpp>
 #include <sparsexx/matrix_types/dense_conversions.hpp>
 #include <sparsexx/spblas/spmbv.hpp>
@@ -9,7 +9,7 @@
 #include <sparsexx/wrappers/mkl_dss_solver.hpp>
 #include <sparsexx/util/submatrix.hpp>
 
-#include "mkl.h"
+//#include "mkl.h"
 
 #include <iostream>
 #include <iomanip>
@@ -21,7 +21,7 @@
 int main( int argc, char** argv ) {
   assert( argc == 2 );
 
-  using spmat_type = sparsexx::csr_matrix<double, MKL_INT>;
+  using spmat_type = sparsexx::csr_matrix<double, int32_t>;
   auto A = sparsexx::read_mm<spmat_type>( std::string( argv[1] ) );
   const int N = A.m();
 
