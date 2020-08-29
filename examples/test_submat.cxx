@@ -1,5 +1,5 @@
 #include <sparsexx/matrix_types/csr_matrix.hpp>
-#include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
+//#include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
 #include <sparsexx/matrix_types/type_traits.hpp>
 #include <sparsexx/matrix_types/dense_conversions.hpp>
 #include <sparsexx/spblas/spmbv.hpp>
