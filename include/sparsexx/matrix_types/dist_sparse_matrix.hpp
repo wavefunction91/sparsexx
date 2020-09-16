@@ -193,6 +193,12 @@ public:
   auto global_m() const { return global_m_; }
   auto global_n() const { return global_n_; }
 
+  const auto& row_tiling() const { return row_tiling_; }
+  const auto& col_tiling() const { return col_tiling_; }
+
+  int owner(int i, int j) const { return pmap_->owner(i,j); } 
+  bool i_own( int i, int j ) const { return pmap_->i_own(i,j); }
+
 };
 
 template <typename... Args>

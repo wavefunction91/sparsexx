@@ -3,6 +3,8 @@
 #include <sparsexx/matrix_types/dist_sparse_matrix.hpp>
 #include <sparsexx/util/submatrix.hpp>
 
+#include "wfn_files.hpp"
+
 
 #include <cassert>
 #include <string>
@@ -100,6 +102,7 @@ int main( int argc, char** argv ) {
   std::string det_file_name = argv[1];
   {
 
+#if 0
   // Read in Det file
   std::ifstream det_file( det_file_name );
 
@@ -132,18 +135,37 @@ int main( int argc, char** argv ) {
   }
 
   int32_t N = ndets_keep;
+#else
+
+  std::vector< uint64_t > alpha_strs, beta_strs;
+  {
+    auto [alpha_strs_bitset, beta_strs_bitset] = 
+      ci::read_wfn_file( det_file_name );
+
+    alpha_strs.resize( alpha_strs_bitset.size() );
+    beta_strs.resize( beta_strs_bitset.size() );
+
+    for( auto i = 0; i < alpha_strs.size(); ++i ) {
+      alpha_strs[i] = alpha_strs_bitset[i].to_ullong();
+      beta_strs[i]  = beta_strs_bitset[i].to_ullong();
+    }
+  }
+
+  int32_t N = alpha_strs.size();
+
+#endif
 
   // Serial formation
   spmat_type H_replicated;
   auto serial_formation_dur = time_op([&]() {
 
-    H_replicated = dets_to_sparse_matrix<spmat_type>(
-      N, N, alpha_strs.data(), beta_strs.data(), alpha_strs.data(),
-      beta_strs.data()
-    );
-    
-    std::fill( H_replicated.nzval().begin(),
-               H_replicated.nzval().end(), 1 );
+   // H_replicated = dets_to_sparse_matrix<spmat_type>(
+   //   N, N, alpha_strs.data(), beta_strs.data(), alpha_strs.data(),
+   //   beta_strs.data()
+   // );
+   // 
+   // std::fill( H_replicated.nzval().begin(),
+   //            H_replicated.nzval().end(), 1 );
       
   } );
 
@@ -155,19 +177,8 @@ int main( int argc, char** argv ) {
   dist_spmat_type H_dist;
   auto dist_formation_dur = time_op([&]() {
     
-#if 1
     size_t npr = world_size;
     size_t npc = 1;
-#else
-    int npr = std::sqrt(world_size);
-    int npc = world_size / npr;
-    int ngrid = npr * npc;
-    while( ngrid != world_size ) {
-      npr--;
-      npc = world_size / npr;
-      ngrid = npr * npc;
-    }
-#endif
 
 
     int32_t nrow_per_rank = N / npr;
@@ -204,6 +215,7 @@ int main( int argc, char** argv ) {
       local_tile.local_matrix = dets_to_sparse_matrix<spmat_type>(
         m_local, n_local, ialpha, ibeta, jalpha, jbeta );
 
+#if 0
       auto lo = std::pair( (int64_t)row_st,  (int64_t)col_st  );
       auto up = std::pair( (int64_t)row_end, (int64_t)col_end );
       auto test_local_mat = extract_submatrix( H_replicated, lo, up );
@@ -212,6 +224,7 @@ int main( int argc, char** argv ) {
         throw std::runtime_error("ROWIND DOESN'T MATCH");
       if( local_tile.local_matrix.colind() != test_local_mat.colind() )
         throw std::runtime_error("COLIND DOESN'T MATCH");
+#endif
 
     }
 

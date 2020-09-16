@@ -5,6 +5,7 @@
 #include <sparsexx/spblas/spmbv.hpp>
 #include <sparsexx/spblas/pspmbv.hpp>
 #include <sparsexx/io/read_mm.hpp>
+#include <sparsexx/io/read_rb.hpp>
 #include <sparsexx/io/read_binary_triplets.hpp>
 #include <sparsexx/io/write_binary_triplets.hpp>
 
@@ -44,7 +45,7 @@ int main( int argc, char** argv ) {
   assert( argc == 2 );
   using spmat_type = sparsexx::csr_matrix<double, int32_t>;
   //auto A = sparsexx::read_binary_triplet<spmat_type>( std::string( argv[1] ) );
-  auto A = sparsexx::read_mm<spmat_type>( std::string( argv[1] ) );
+  auto A = sparsexx::read_rb<spmat_type>( std::string( argv[1] ) );
   const int N = A.m();
 
   // Default tiling
@@ -59,7 +60,7 @@ int main( int argc, char** argv ) {
   std::vector<index_t> col_tiling = { 0, N };
 
   // Reordering
-  if( world_rank == 0 ) {
+  if( 0 and world_rank == 0 ) {
 
     std::stringstream ss;
     int64_t nparts = std::max(decltype(world_size)(2), world_size);
@@ -127,9 +128,6 @@ int main( int argc, char** argv ) {
   sparsexx::dist_csr_matrix<double,int32_t> dist_A( MPI_COMM_WORLD, N, N,
     row_tiling, col_tiling );
 
-  sparsexx::dist_coo_matrix<double,int32_t> dist_coo( MPI_COMM_WORLD, N, N,
-    row_tiling, col_tiling );
-
 
   if(world_rank == 0) std::cout << "GLOBAL NNZ = " << A.nnz() << std::endl;
   for( auto& [tile_index, local_tile] : dist_A ) {
@@ -151,7 +149,7 @@ int main( int argc, char** argv ) {
     //std::vector<double> local_dense( local_tile.local_matrix.m() * local_tile.local_matrix.n() );
     //sparsexx::convert_to_dense( local_tile.local_matrix, local_dense.data(), local_tile.local_matrix.m() );
 
-    std::cout << ss.str();
+    //std::cout << ss.str();
 
   }
 
@@ -194,14 +192,22 @@ int main( int argc, char** argv ) {
   //}
 
   
+  auto spbmv_dur = time_op( [&]() {
   sparsexx::spblas::gespmbv( K, 1., A, V.data(), N, 0., AV_serial.data(), N );
+  });
 
   auto pspbmv_dur = time_op( [&]() {
-    sparsexx::spblas::pgespmbv_grv( K, 1., dist_A, V.data(), N, 0., AV_dist.data(), N );
+    //sparsexx::spblas::pgespmbv_grv( K, 1., dist_A, V.data(), N, 0., AV_dist.data(), N );
+    sparsexx::spblas::pgespmbv_grv2( K, 1., dist_A, V.data(), N, 0., AV_dist.data(), N );
   });
 
 
   #if 0
+  //if(!world_rank)
+  //for( int i = 0; i < N; ++ i ) {
+  //  ss << V[i] << ", " << AV_serial[i] << ", " << AV_dist[i] << std::endl;
+  //}
+
   ss << "SPMBV DIFF " << world_rank << " = " 
     << *std::max_element(V.begin(), V.end() ) << " "
     << *std::max_element(AV_serial.begin(), AV_serial.end() );
@@ -223,6 +229,7 @@ int main( int argc, char** argv ) {
     std::cout << "PSPMBV AVG = " << avg_load << std::endl;
     std::cout << "PSPMBV IMB = " << (avg_load / max_load) << std::endl;
     std::cout << "PSPMBV DUR = " << pspbmv_dur << " ms" << std::endl;
+    std::cout << "SPMBV DUR  = " << spbmv_dur << " ms" << std::endl;
   }
   }
   MPI_Finalize();
