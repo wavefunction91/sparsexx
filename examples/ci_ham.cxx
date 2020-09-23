@@ -44,7 +44,10 @@ auto dets_to_coo_matrix_double_loop(
   using index_t = typename sparsexx::coo_matrix<Args...>::index_type;
   
   std::vector<index_t> is, js;
-  for(size_t i = 0; i < M; ++i )
+  size_t n_reserve = M*N*0.01;
+  is.reserve( n_reserve );
+  js.reserve( n_reserve );
+  for(size_t i = 0; i < M; ++i ) {
   for(size_t j = 0; j < N; ++j ) {
     auto hamming_dist =  popcnt(ialpha[i] ^ jalpha[j]);
          hamming_dist += popcnt(ibeta[i]  ^ jbeta[j] );
@@ -53,9 +56,10 @@ auto dets_to_coo_matrix_double_loop(
       js.emplace_back( j );
     }
   }
+  }
 
   auto nnz = is.size();
-  sparsexx::coo_matrix<Args...> H( N, N, nnz, 0 );
+  sparsexx::coo_matrix<Args...> H( M, N, nnz, 0 );
   H.rowind() = std::move( is );
   H.colind() = std::move( js );
 
@@ -137,6 +141,8 @@ int main( int argc, char** argv ) {
   int32_t N = ndets_keep;
 #else
 
+  const bool check_raw_nnz = false;
+  size_t     raw_nnz = 0;
   std::vector< uint64_t > alpha_strs, beta_strs;
   {
     auto [alpha_strs_bitset, beta_strs_bitset] = 
@@ -149,9 +155,27 @@ int main( int argc, char** argv ) {
       alpha_strs[i] = alpha_strs_bitset[i].to_ullong();
       beta_strs[i]  = beta_strs_bitset[i].to_ullong();
     }
+
+    if( check_raw_nnz ) {
+      size_t N = alpha_strs_bitset.size();
+      for( size_t i = 0; i < N; ++i ) {
+        if( !(i%1000) ) std::cout << i << std::endl;
+      for( size_t j = 0; j < N; ++j )
+      if( (alpha_strs_bitset[i] ^ alpha_strs_bitset[j]).count() +
+          (beta_strs_bitset[i]  ^ beta_strs_bitset[j] ).count() <= 4 ) raw_nnz++;
+      }
+    }
   }
 
   int32_t N = alpha_strs.size();
+
+
+  if( !world_rank ) {
+    std::cout << "Wfn File          = " << det_file_name << std::endl;
+    std::cout << "Problem Dimension = " << N             << std::endl;
+    if( check_raw_nnz )
+    std::cout << "Raw NNZ           = " << raw_nnz       << std::endl;
+  }
 
 #endif
 
@@ -159,19 +183,20 @@ int main( int argc, char** argv ) {
   spmat_type H_replicated;
   auto serial_formation_dur = time_op([&]() {
 
-   // H_replicated = dets_to_sparse_matrix<spmat_type>(
-   //   N, N, alpha_strs.data(), beta_strs.data(), alpha_strs.data(),
-   //   beta_strs.data()
-   // );
-   // 
-   // std::fill( H_replicated.nzval().begin(),
-   //            H_replicated.nzval().end(), 1 );
+    H_replicated = dets_to_sparse_matrix<spmat_type>(
+      N, N, alpha_strs.data(), beta_strs.data(), alpha_strs.data(),
+      beta_strs.data()
+    );
+    
+    std::fill( H_replicated.nzval().begin(),
+               H_replicated.nzval().end(), 1 );
       
   } );
 
   if( !world_rank )
     std::cout << "Hamiltonian has NNZ = " << H_replicated.nnz() << std::endl;
 
+#if 0
 
   // Distributed formation
   dist_spmat_type H_dist;
@@ -234,6 +259,8 @@ int main( int argc, char** argv ) {
     std::cout << "Serial Dur = " << serial_formation_dur << std::endl;
     std::cout << "Dist   Dur = " << dist_formation_dur   << std::endl;
   }
+
+#endif
 
   }
   MPI_Finalize();
