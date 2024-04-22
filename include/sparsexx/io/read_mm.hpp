@@ -1,12 +1,20 @@
+/*
+ * sparsexx Copyright (c) 2023, The Regents of the University of California,
+ * through Lawrence Berkeley National Laboratory (subject to receipt of
+ * any required approvals from the U.S. Dept. of Energy). All rights reserved.
+ *
+ * See LICENSE.txt for details
+ */
+
 #pragma once
 
+#include <cassert>
+#include <fstream>
+#include <iostream>
 #include <sparsexx/matrix_types/type_traits.hpp>
 #include <sparsexx/util/string.hpp>
-#include <fstream>
-#include <cassert>
-#include <string>
-#include <iostream>
 #include <stdexcept>
+#include <string>
 
 namespace sparsexx {
 
@@ -55,7 +63,6 @@ csr_matrix<T,index_t,Alloc> read_mm( std::string fname ) {
 
     if( is_sym ) nnz = 2*nnz - n;
   }
-
 
 #if 0
   std::vector< std::tuple< int64_t, int64_t, T > > coo;
@@ -211,51 +218,73 @@ csr_matrix<T,index_t,Alloc> read_mm( std::string fname ) {
   return A;
 } // read_mm (CSR)
 
-
 #else
 
+namespace detail {
+enum class coo_sort_scheme { no_sort, sort_by_row, sort_by_col };
+
+template <typename MatType>
+struct get_default_coo_sort_scheme;
+template <typename... Args>
+struct get_default_coo_sort_scheme<coo_matrix<Args...> > {
+  static constexpr auto value = coo_sort_scheme::no_sort;
+};
+template <typename... Args>
+struct get_default_coo_sort_scheme<csr_matrix<Args...> > {
+  static constexpr auto value = coo_sort_scheme::sort_by_row;
+};
+template <typename... Args>
+struct get_default_coo_sort_scheme<csc_matrix<Args...> > {
+  static constexpr auto value = coo_sort_scheme::sort_by_col;
+};
+
+template <typename MatType>
+inline constexpr auto default_coo_sort_scheme_v =
+    get_default_coo_sort_scheme<MatType>::value;
+}  // namespace detail
 
 template <typename T, typename index_t, typename Alloc>
-coo_matrix<T,index_t,Alloc> read_mm_as_coo( std::string fname ) {
-
+coo_matrix<T, index_t, Alloc> read_mm_as_coo(
+    std::string fname, detail::coo_sort_scheme sort_scheme) {
   std::ifstream f_in(fname);
 
   std::string line;
 
-  int64_t m, n, nnz;
+  int64_t m, n, nnz_min;
   bool is_sym = false;
   {
-    std::getline( f_in, line );
-    auto tokens = tokenize( line );
+    std::getline(f_in, line);
+    auto tokens = tokenize(line);
 
     // Check if this is actually a MM file...
 
-    if( tokens[0].compare("%%MatrixMarket") or tokens.size() != 5)
+    if(tokens[0].compare("%%MatrixMarket") or tokens.size() != 5)
       throw std::runtime_error(fname + " is not a MM file");
 
     is_sym = !tokens[4].compare("symmetric");
-    
-    while(std::getline( f_in, line )) {
-      if( line[0] != '%' ) break;
+
+    while(std::getline(f_in, line)) {
+      if(line[0] != '%') break;
     }
 
-    //std::getline( f_in, line );
-    tokens = tokenize( line );
-    if( tokens.size() != 3 )
-      throw std::runtime_error(fname + 
-            " contains an invalid spec for problem dimension");
+    // std::getline( f_in, line );
+    tokens = tokenize(line);
+    if(tokens.size() != 3)
+      throw std::runtime_error(
+          fname + " contains an invalid spec for problem dimension");
 
-    m   = std::stoll(tokens[0]);
-    n   = std::stoll(tokens[1]);
-    nnz = std::stoll(tokens[2]);
+    m = std::stoll(tokens[0]);
+    n = std::stoll(tokens[1]);
+    nnz_min = std::stoll(tokens[2]);
 
-    if( is_sym and m != n )
-      throw std::runtime_error( fname + " symmetric not compatible with M!=N" );
+    if(is_sym and m != n)
+      throw std::runtime_error(fname + " symmetric not compatible with M!=N");
 
-    if( is_sym ) nnz = 2*nnz - n;
+    if(is_sym) nnz_min *= 2;
   }
 
-  coo_matrix<T,index_t,Alloc> A(m, n, nnz);
+#if 0
+  coo_matrix<T,index_t,Alloc> A(m, n, nnz_min);
   auto& rowind = A.rowind();
   auto& colind = A.colind();
   auto& nzval  = A.nzval();
@@ -281,45 +310,66 @@ coo_matrix<T,index_t,Alloc> read_mm_as_coo( std::string fname ) {
     }
 
   }
+#else
 
-  assert( nnz == nnz_idx );
+  std::vector<index_t> rowind, colind;
+  std::vector<T> nzval;
+  rowind.reserve(nnz_min);
+  colind.reserve(nnz_min);
+  nzval.reserve(nnz_min);
+
+  size_t nnz_true = 0;
+  while(std::getline(f_in, line)) {
+    auto tokens = tokenize(line);
+    int64_t i = std::stoll(tokens[0]);
+    int64_t j = std::stoll(tokens[1]);
+    T v = (tokens.size() == 3) ? std::stod(tokens[2]) : 1.;
+
+    rowind.push_back(i);
+    colind.push_back(j);
+    nzval.push_back(v);
+    nnz_true++;
+
+    if(is_sym and i != j) {
+      rowind.push_back(j);
+      colind.push_back(i);
+      nzval.push_back(v);
+      nnz_true++;
+    }
+  }
+
+  coo_matrix<T, index_t, Alloc> A(m, n, std::move(colind), std::move(rowind),
+                                  std::move(nzval));
+#endif
 
   A.determine_indexing_from_adj();
-  A.sort_by_row_index();
-
-  assert( A.is_sorted_by_row_index() );
+  if(sort_scheme == detail::coo_sort_scheme::sort_by_row) {
+    A.sort_by_row_index();
+    assert(A.is_sorted_by_row_index());
+  }
+  if(sort_scheme == detail::coo_sort_scheme::sort_by_col) {
+    A.sort_by_col_index();
+    assert(A.is_sorted_by_col_index());
+  }
 
   return A;
 }
 
-
-
-
 template <typename SpMatType>
-SpMatType read_mm( std::string fname ) {
-
+SpMatType read_mm(std::string fname) {
   using value_t = detail::value_type_t<SpMatType>;
   using index_t = detail::index_type_t<SpMatType>;
   using allocator_t = detail::allocator_type_t<SpMatType>;
 
-  if constexpr ( detail::is_coo_matrix_v<SpMatType> )
-    return read_mm_as_coo<value_t,index_t,allocator_t>( fname );
+  if constexpr(detail::is_coo_matrix_v<SpMatType>)
+    return read_mm_as_coo<value_t, index_t, allocator_t>(
+        fname, detail::coo_sort_scheme::no_sort);
   else
-    return SpMatType( read_mm_as_coo<value_t,index_t,allocator_t>( fname ) );
-
+    return SpMatType(read_mm_as_coo<value_t, index_t, allocator_t>(
+        fname, detail::default_coo_sort_scheme_v<SpMatType>));
+  abort();
 }
-
-
-
-
-
 
 #endif
 
-
-
-
-
-
-
-}
+}  // namespace sparsexx

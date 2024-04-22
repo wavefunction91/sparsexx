@@ -1,203 +1,188 @@
+/*
+ * sparsexx Copyright (c) 2023, The Regents of the University of California,
+ * through Lawrence Berkeley National Laboratory (subject to receipt of
+ * any required approvals from the U.S. Dept. of Energy). All rights reserved.
+ *
+ * See LICENSE.txt for details
+ */
+
 #pragma once
-
-#include "type_traits.hpp"
-#include <sparsexx/util/hash.hpp>
-#include <sparsexx/util/mpi.hpp>
-
-#include <map>
+#include <algorithm>
+#include <iostream>
 #include <memory>
+#include <set>
+#include <sparsexx/matrix_types/type_traits.hpp>
+#include <sparsexx/util/mpi.hpp>
+#include <sparsexx/util/submatrix.hpp>
+#include <sstream>
 
 namespace sparsexx {
 
-class dist_pmap {
-
-protected:
-
-  MPI_Comm comm_;
-
-public:
-
-  dist_pmap( MPI_Comm c ) noexcept : comm_(c) { }
-  dist_pmap( ) noexcept : dist_pmap( MPI_COMM_WORLD ) { }
-
-  virtual size_t owner( size_t i, size_t j ) const = 0;
-  virtual ~dist_pmap() noexcept = default;
-
-  bool i_own( size_t i, size_t j ) const { 
-    auto my_rank = detail::get_mpi_rank( comm_ );
-    return my_rank == owner(i,j);
-  }
-
-  MPI_Comm comm() const { return comm_; }
-};
-
-
-class cyclic_pmap : public dist_pmap {
-
-protected:
-
-  size_t np_;
-
-public:
-
-  template <typename... Args>
-  cyclic_pmap( Args&&... args) : dist_pmap(std::forward<Args>(args)...) { 
-    np_ = detail::get_mpi_size( this->comm_ );
-  }
-
-  virtual ~cyclic_pmap() noexcept = default;
-
-};
-
-
-struct row_cyclic_pmap : public cyclic_pmap {
-
-  template <typename... Args>
-  row_cyclic_pmap( Args&&... args ) :
-    cyclic_pmap( std::forward<Args>(args)... ) { }
-
-  virtual size_t owner( size_t i, size_t j ) const {
-    (void)(j);
-    return i % this->np_;
-  };
-
-};
-
-struct col_cyclic_pmap : public cyclic_pmap {
-
-  template <typename... Args>
-  col_cyclic_pmap( Args&&... args ) :
-    cyclic_pmap( std::forward<Args>(args)... ) { }
-
-  virtual size_t owner( size_t i, size_t j ) const {
-    (void)(i);
-    return j % this->np_;
-  };
-
-};
-
-
-
-
-
-template <typename... Args>
-static inline std::unique_ptr<dist_pmap>
-  make_row_cyclic_pmap( Args&&... args ) {
-
-  return std::make_unique< row_cyclic_pmap >( 
-    std::forward<Args>(args)...
-  );
-
-}
-
-template <typename... Args>
-static inline std::unique_ptr<dist_pmap>
-  make_col_cyclic_pmap( Args&&... args ) {
-
-  return std::make_unique< col_cyclic_pmap >( 
-    std::forward<Args>(args)...
-  );
-
-}
-
-
-template <typename... Args>
-static inline std::unique_ptr<dist_pmap> 
-  make_default_pmap( Args&&... args ) {
-
-  return make_row_cyclic_pmap( std::forward<Args>(args)... );
-
-}
-
-
 template <typename SpMatType>
 class dist_sparse_matrix {
-
-public:
-
+ public:
   using value_type = detail::value_type_t<SpMatType>;
   using index_type = detail::index_type_t<SpMatType>;
-  using size_type  = detail::size_type_t<SpMatType>;
-  using tile_type  = SpMatType;
+  using size_type = detail::size_type_t<SpMatType>;
+  using tile_type = SpMatType;
+  using extent_type = std::pair<index_type, index_type>;
 
-  struct sparse_tile {
-
-    using index_extent_t = std::pair< index_type, index_type >;
-
-    index_extent_t global_row_extent;
-    index_extent_t global_col_extent;
-    SpMatType      local_matrix;
-  
-  };
-
-protected:
-
-
+ protected:
   MPI_Comm comm_;
+  int comm_size_;
+  int comm_rank_;
 
   size_type global_m_;
   size_type global_n_;
 
-  std::vector< index_type > row_tiling_;
-  std::vector< index_type > col_tiling_;
+  std::shared_ptr<tile_type> diagonal_tile_ = nullptr;
+  std::shared_ptr<tile_type> off_diagonal_tile_ = nullptr;
 
-  std::unique_ptr< dist_pmap > pmap_;
+  std::vector<extent_type> dist_row_extents_;
 
-  using tile_index_t = std::pair< index_type, index_type >;
-  std::unordered_map< tile_index_t, sparse_tile, detail::pair_hasher >
-    local_tiles_;
-
-
-  static decltype(local_tiles_) populate_local_tiles( const dist_pmap& pmap,
-    const decltype(row_tiling_)& rt, const decltype(col_tiling_)& ct ) {
-
-    decltype(local_tiles_) lt;
-
-    for( index_type it = 0; it < (index_type)rt.size()-1; ++it )
-    for( index_type jt = 0; jt < (index_type)ct.size()-1; ++jt )
-    if( pmap.i_own( it, jt ) ) {
-      sparse_tile tile; 
-      tile.global_row_extent = {rt[it], rt[it+1]};
-      tile.global_col_extent = {ct[jt], ct[jt+1]};
-      lt[ tile_index_t{it, jt} ] = std::move(tile);
-    }
-
-    return lt;
-  }
-
-public:
-
+ public:
   constexpr dist_sparse_matrix() noexcept = default;
+  dist_sparse_matrix(dist_sparse_matrix&&) noexcept = default;
 
-  dist_sparse_matrix( MPI_Comm c, size_t M, size_t N,
-    const std::vector<index_type>& rt,
-    const std::vector<index_type>& ct ) :
-    comm_(c), global_m_(M), global_n_(N), row_tiling_(rt),
-    col_tiling_(ct), pmap_( make_default_pmap(c) ) { 
+  // Ctor with default row partitioning
+  dist_sparse_matrix(MPI_Comm c, size_type M, size_type N)
+      : comm_(c), global_m_(M), global_n_(N) {
+    comm_size_ = detail::get_mpi_size(comm_);
+    comm_rank_ = detail::get_mpi_rank(comm_);
+    const auto nrow_per_rank = M / comm_size_;
 
-    local_tiles_ = std::move( populate_local_tiles( *pmap_, rt, ct ) );
+    dist_row_extents_.resize(comm_size_);
+    dist_row_extents_[0] = {0, nrow_per_rank};
+    for(int i = 1; i < comm_size_; ++i) {
+      dist_row_extents_[i] = {dist_row_extents_[i - 1].second,
+                              dist_row_extents_[i - 1].second + nrow_per_rank};
+    }
+    dist_row_extents_.back().second +=
+        M % comm_size_;  // Last rank gets carry-over
   }
 
+  // Ctor with custom row partitioning
+  dist_sparse_matrix(MPI_Comm c, size_t M, size_t N,
+                     const std::vector<extent_type>& row_tiles)
+      : comm_(c), global_m_(M), global_n_(N), dist_row_extents_(row_tiles) {
+    comm_size_ = detail::get_mpi_size(comm_);
+    comm_rank_ = detail::get_mpi_rank(comm_);
 
-  auto begin() { return local_tiles_.begin(); }
-  auto end()   { return local_tiles_.end();   }
+    if(dist_row_extents_.size() != comm_size_)
+      throw std::runtime_error("Incorrect Row Tile Size");
 
-  const auto begin() const { return local_tiles_.begin(); }
-  const auto end()   const { return local_tiles_.end();   }
+    if(dist_row_extents_[0].first != 0 or dist_row_extents_.back().second != M)
+      throw std::runtime_error("Invalid Row Tile Bounds");
 
-  const auto cbegin() const { return local_tiles_.cbegin(); }
-  const auto cend()   const { return local_tiles_.cend();   }
+    for(auto [i, j] : dist_row_extents_) {
+      if(i > j) throw std::runtime_error("Row Tiles Must Be Sorted");
+    }
+    for(auto i = 0; i < comm_size_ - 1; ++i) {
+      if(dist_row_extents_[i].second != dist_row_extents_[i + 1].first)
+        throw std::runtime_error("Row Tiles Must Be Contiguous");
+    }
+  }
 
-  auto comm() const { return comm_; }
+  dist_sparse_matrix(const dist_sparse_matrix& other)
+      : dist_sparse_matrix(other.comm_, other.global_m_, other.global_n_) {
+    if(other.diagonal_tile_) set_diagonal_tile(other.diagonal_tile());
+    if(other.off_diagonal_tile_)
+      set_off_diagonal_tile(other.off_diagonal_tile());
+  }
 
-  auto global_m() const { return global_m_; }
-  auto global_n() const { return global_n_; }
+  dist_sparse_matrix(MPI_Comm c, const SpMatType& A)
+      : dist_sparse_matrix(c, A.m(), A.n()) {
+    auto [local_row_st, local_row_en] = dist_row_extents_[comm_rank_];
+    auto local_lo =
+        std::make_pair<int64_t, int64_t>(local_row_st, local_row_st);
+    auto local_up =
+        std::make_pair<int64_t, int64_t>(local_row_en, local_row_en);
+    diagonal_tile_ =
+        std::make_shared<tile_type>(extract_submatrix(A, local_lo, local_up));
+    off_diagonal_tile_ = std::make_shared<tile_type>(
+        extract_submatrix_inclrow_exclcol(A, local_lo, local_up));
+    diagonal_tile_->set_indexing(0);
+    off_diagonal_tile_->set_indexing(0);
+  }
 
-};
+  dist_sparse_matrix(MPI_Comm c, const SpMatType& A,
+                     const std::vector<extent_type>& row_tiles)
+      : dist_sparse_matrix(c, A.m(), A.n(), row_tiles) {
+    auto [local_row_st, local_row_en] = dist_row_extents_[comm_rank_];
+    auto local_lo =
+        std::make_pair<int64_t, int64_t>(local_row_st, local_row_st);
+    auto local_up =
+        std::make_pair<int64_t, int64_t>(local_row_en, local_row_en);
+    diagonal_tile_ =
+        std::make_shared<tile_type>(extract_submatrix(A, local_lo, local_up));
+    off_diagonal_tile_ = std::make_shared<tile_type>(
+        extract_submatrix_inclrow_exclcol(A, local_lo, local_up));
+    diagonal_tile_->set_indexing(0);
+    off_diagonal_tile_->set_indexing(0);
+  }
 
-template <typename... Args>
-using dist_csr_matrix = dist_sparse_matrix<csr_matrix<Args...>>;
-template <typename... Args>
-using dist_coo_matrix = dist_sparse_matrix<coo_matrix<Args...>>;
+  inline auto m() const { return global_m_; }
+  inline auto n() const { return global_n_; }
 
-}
+  inline MPI_Comm comm() const { return comm_; }
+
+  inline auto row_bounds(int rank) const { return dist_row_extents_[rank]; }
+
+  inline size_type row_extent(int rank) const {
+    return dist_row_extents_[rank].second - dist_row_extents_[rank].first;
+  }
+
+  inline size_type local_row_extent() const { return row_extent(comm_rank_); }
+
+  inline size_type local_row_start() const {
+    return dist_row_extents_[comm_rank_].first;
+  }
+
+  inline size_type nnz() const noexcept {
+    size_t _nnz = 0;
+    if(diagonal_tile_) _nnz += diagonal_tile_->nnz();
+    if(off_diagonal_tile_) _nnz += off_diagonal_tile_->nnz();
+    return _nnz;
+  }
+
+  inline size_type mem_footprint() const noexcept {
+    size_type _mf = 0;
+    if(diagonal_tile_) _mf += diagonal_tile_->mem_footprint();
+    if(off_diagonal_tile_) _mf += off_diagonal_tile_->mem_footprint();
+    return _mf;
+  }
+
+  auto diagonal_tile_ptr() { return diagonal_tile_; }
+  const auto diagonal_tile_ptr() const { return diagonal_tile_; }
+  auto off_diagonal_tile_ptr() { return off_diagonal_tile_; }
+  const auto off_diagonal_tile_ptr() const { return off_diagonal_tile_; }
+
+  const auto& diagonal_tile() const { return *diagonal_tile_; }
+  const auto& off_diagonal_tile() const { return *off_diagonal_tile_; }
+
+  void set_diagonal_tile(const SpMatType& A) {
+    diagonal_tile_ = std::make_shared<tile_type>(A);
+  }
+  void set_off_diagonal_tile(const SpMatType& A) {
+    off_diagonal_tile_ = std::make_shared<tile_type>(A);
+  }
+
+  void set_diagonal_tile(SpMatType&& A) {
+    diagonal_tile_ = std::make_shared<tile_type>(std::move(A));
+  }
+  void set_off_diagonal_tile(SpMatType&& A) {
+    off_diagonal_tile_ = std::make_shared<tile_type>(std::move(A));
+  }
+};  // class dist_sparse_matrix
+
+template <typename SpMatType>
+struct is_dist_sparse_matrix : public std::false_type {};
+template <typename SpMatType>
+struct is_dist_sparse_matrix<dist_sparse_matrix<SpMatType>>
+    : public std::true_type {};
+
+template <typename SpMatType>
+inline static constexpr bool is_dist_sparse_matrix_v =
+    is_dist_sparse_matrix<SpMatType>::value;
+
+}  // namespace sparsexx
