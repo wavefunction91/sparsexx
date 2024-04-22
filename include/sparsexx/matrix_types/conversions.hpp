@@ -85,7 +85,7 @@ csr_matrix<T, index_t, Alloc>::csr_matrix(
     }
   rowptr_.at(m_) = nnz_ + indexing_;
 #else
-  if(indexing_) throw std::runtime_error("NONZERO INDEXING");
+  //if(indexing_) throw std::runtime_error("NONZERO INDEXING");
   for(size_type i = 0; i < nnz_; ++i) {
     rowptr_[rowind_coo[i] - indexing_ + 1]++;
   }
