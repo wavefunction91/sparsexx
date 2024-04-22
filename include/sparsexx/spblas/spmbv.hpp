@@ -127,7 +127,7 @@ gespmbv(int64_t K, ALPHAT ALPHA, const SpMatType& A,
     }
 }
 
-#if SPARSEXX_ENABLE_MKL
+#ifdef SPARSEXX_ENABLE_MKL
 /**
  *  @brief Optimized sparse matrix - dense block vector product.
  *

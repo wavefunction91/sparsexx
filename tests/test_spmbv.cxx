@@ -7,12 +7,25 @@
  */
 
 #include <sparsexx/matrix_types/csr_matrix.hpp>
+#include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
 #include <sparsexx/spblas/spmbv.hpp>
 
 #include "catch2/catch.hpp"
 
-TEST_CASE("CSR SPMBV", "[spmbv]") {
-  using mat_type = sparsexx::csr_matrix<double, int32_t>;
+#ifndef SPARSEXX_ENABLE_MKL
+using test_types = std::tuple<
+  sparsexx::csr_matrix<double, int32_t>
+>;
+#else
+using test_types = std::tuple<
+  sparsexx::csr_matrix<double, int32_t>,
+  sparsexx::mkl_csr_matrix<double,int32_t>
+>;
+#endif
+
+
+TEMPLATE_LIST_TEST_CASE("CSR SPMBV", "[spmbv]", test_types) {
+  using mat_type = TestType;
   // [2 1 0 0 0 0]
   // [1 2 1 0 0 0]
   // [0 1 2 1 0 0]

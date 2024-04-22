@@ -12,7 +12,7 @@
 #include <sparsexx/matrix_types/type_traits.hpp>
 #include <sparsexx/sparsexx_config.hpp>
 
-#if SPARSEXX_ENABLE_MKL
+#ifdef SPARSEXX_ENABLE_MKL
 #include <sparsexx/wrappers/mkl_sparse_matrix.hpp>
 #endif
 
@@ -29,7 +29,7 @@ template <typename SpMatType, typename ALPHAT, typename BETAT>
 inline constexpr bool are_alpha_beta_convertible_v =
     are_alpha_beta_convertible<SpMatType, ALPHAT, BETAT>::value;
 
-#if SPARSEXX_ENABLE_MKL
+#ifdef SPARSEXX_ENABLE_MKL
 
 template <typename SpMatType, typename ALPHAT, typename BETAT>
 struct spmbv_uses_mkl {

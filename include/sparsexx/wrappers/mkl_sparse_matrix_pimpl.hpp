@@ -8,13 +8,14 @@
 
 #pragma once
 #include <sparsexx/sparsexx_config.hpp>
-#if SPARSEXX_ENABLE_MKL
+#ifdef SPARSEXX_ENABLE_MKL
 
 #include <cassert>
 #include <iostream>
 
 #include "mkl_exceptions.hpp"
 #include "mkl_types.hpp"
+#include "mkl_type_traits.hpp"
 namespace sparsexx::detail::mkl {
 
 struct sparse_wrapper_pimpl {
